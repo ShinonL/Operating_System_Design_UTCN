@@ -1,0 +1,455 @@
+diff --git a/src/CommonLib/src/lock_common.c b/src/CommonLib/src/lock_common.c
+index e07c1d6..43cf190 100644
+--- a/src/CommonLib/src/lock_common.c
++++ b/src/CommonLib/src/lock_common.c
+@@ -17,6 +17,17 @@ PFUNC_LockIsOwner        LockIsOwner = NULL;
+ // warning C4028: formal parameter 1 different from declaration
+ #pragma warning(disable:4028)
+ 
++/*
++* 5:
++*               Mutex                       |               SpinLock
++* ------------------------------------------------------------------------------------
++* - uses block-waiting                      | - uses busy-waiting 
++* - executive synchronization mechanism     | - primitive synchronization mechanism
++* - recommended for longer pieces of code   | - recommended for smaller pieces of code
++*   because of the block waiting mechanism  |   because of the busy waiting mechanism
++*   releasing the CPU when not used         |   keeping the CPU busy even if it is not
++*                                           |   used
++*/
+ void
+ LockSystemInit(
+     IN      BOOLEAN             MonitorSupport
+diff --git a/src/CommonLib/src/spinlock.c b/src/CommonLib/src/spinlock.c
+index a89f6b2..a9e993b 100644
+--- a/src/CommonLib/src/spinlock.c
++++ b/src/CommonLib/src/spinlock.c
+@@ -15,6 +15,11 @@ SpinlockInit(
+     _InterlockedExchange8(&Lock->State, LOCK_FREE);
+ }
+ 
++/*
++* 1. a:
++* The second parameter holds the saved state of the interrupt system returned by the function.
++* We need this OUT parameter because the SpinlockAcquire disables the interrupt system.
++*/
+ void
+ SpinlockAcquire(
+     INOUT       PSPINLOCK       Lock,
+@@ -35,7 +40,14 @@ SpinlockAcquire(
+                 Lock->FunctionWhichTookLock,
+                 *((PVOID*)_AddressOfReturnAddress())
+                 );
+-
++    
++    /*
++    * 1. b:
++    * _InterlockedCompareExchange8 is an atomic operation to take the lock. By using an atomic operation for this, we
++    * can be sure that no other CPU tries to acquire the lock at the same time with the current one. The interrupts are
++    * disabled for the current CPU, so any other could come in and disturb the lock acquire function if we would not use
++    * an atomic operation.
++    */
+     while (LOCK_TAKEN == _InterlockedCompareExchange8(&Lock->State, LOCK_TAKEN, LOCK_FREE))
+     {
+         _mm_pause();
+@@ -44,6 +56,12 @@ SpinlockAcquire(
+     ASSERT(NULL == Lock->FunctionWhichTookLock);
+     ASSERT(NULL == Lock->Holder);
+ 
++    /*
++    * 1. c:
++    * Holder = the CPU that acquired the lock
++    * FunctionWhichTookLock = the function in which SpinLockAquire was called (used mainly for
++    *                         degugging purposes)
++    */
+     Lock->Holder = pCurrentCpu;
+     Lock->FunctionWhichTookLock = *( (PVOID*) _AddressOfReturnAddress() );
+ 
+@@ -95,6 +113,11 @@ SpinlockIsOwner(
+     return CpuGetCurrent() == Lock->Holder;
+ }
+ 
++/*
++* 2. c:
++* The OldIntrState holds the interrupt state to which the CPU should return after the 
++* interrupts are enabled again.
++*/
+ void
+ SpinlockRelease(
+     INOUT       PSPINLOCK       Lock,
+@@ -103,6 +126,13 @@ SpinlockRelease(
+ {
+     PVOID pCurrentCpu = CpuGetCurrent();
+ 
++    /*
++    * 2. a:
++    * This asserts make sure that:
++    *   1. We won't try to release a NULL lock (makes no sense to do that)
++    *   2. The current CPU that tries to release the lock is the actual owner of that lock
++    *   3. Makes sure that interrupts are disabled for the current CPU
++    */
+     ASSERT(NULL != Lock);
+     ASSERT_INFO(pCurrentCpu == Lock->Holder,
+                 "LockTaken by CPU: 0x%X in function: 0x%X\nNow release by CPU: 0x%X in function: 0x%X\n",
+@@ -113,6 +143,15 @@ SpinlockRelease(
+     Lock->Holder = NULL;
+     Lock->FunctionWhichTookLock = NULL;
+ 
++    /*
++    * 2. b:
++    * Here the lock is freed. This is another atomic operation. Just ast the lock aquire, we
++    * need the interrupts to be disabled so that our function won't be interrupted by external
++    * events.
++    * 
++    * And we are again using an atomic operation _InterlockedExchange8 to make sure other CPUs
++    * won't interfere with the release of the lock
++    */
+     _InterlockedExchange8(&Lock->State, LOCK_FREE);
+ 
+     CpuIntrSetState(OldIntrState);
+diff --git a/src/HAL9000/HAL9000.vcxproj b/src/HAL9000/HAL9000.vcxproj
+index 779c36a..d34ccc7 100644
+--- a/src/HAL9000/HAL9000.vcxproj
++++ b/src/HAL9000/HAL9000.vcxproj
+@@ -181,6 +181,7 @@
+     </PostBuildEvent>
+   </ItemDefinitionGroup>
+   <ItemGroup>
++    <ClCompile Include="semaphore.c" />
+     <ClCompile Include="src\acpi_interface.c" />
+     <ClCompile Include="src\acpi_osl.c" />
+     <ClCompile Include="src\ap_tramp.c" />
+@@ -366,6 +367,7 @@
+     <ClInclude Include="headers\um_application.h" />
+     <ClInclude Include="headers\vmm.h" />
+     <ClInclude Include="headers\vm_reservation_space.h" />
++    <ClInclude Include="semaphore.h" />
+   </ItemGroup>
+   <ItemGroup>
+     <YASM Include="src\_mboot32.yasm">
+diff --git a/src/HAL9000/HAL9000.vcxproj.filters b/src/HAL9000/HAL9000.vcxproj.filters
+index 0d3b52f..4d29382 100644
+--- a/src/HAL9000/HAL9000.vcxproj.filters
++++ b/src/HAL9000/HAL9000.vcxproj.filters
+@@ -402,6 +402,9 @@
+     <ClCompile Include="src\test_process.c">
+       <Filter>Source Files\debug\test\userprog</Filter>
+     </ClCompile>
++    <ClCompile Include="semaphore.c">
++      <Filter>Source Files\executive</Filter>
++    </ClCompile>
+   </ItemGroup>
+   <ItemGroup>
+     <ClInclude Include="headers\HAL9000.h">
+@@ -704,6 +707,9 @@
+     <ClInclude Include="headers\test_process.h">
+       <Filter>Header Files\debug\test\userprog</Filter>
+     </ClInclude>
++    <ClInclude Include="semaphore.h">
++      <Filter>Header Files\executive</Filter>
++    </ClInclude>
+   </ItemGroup>
+   <ItemGroup>
+     <None Include="src\defines.yasm">
+diff --git a/src/HAL9000/headers/cmd_thread_helper.h b/src/HAL9000/headers/cmd_thread_helper.h
+index 0461ea0..391081f 100644
+--- a/src/HAL9000/headers/cmd_thread_helper.h
++++ b/src/HAL9000/headers/cmd_thread_helper.h
+@@ -14,3 +14,4 @@ FUNC_GenericCommand CmdRdmsr;
+ FUNC_GenericCommand CmdWrmsr;
+ FUNC_GenericCommand CmdCheckAd;
+ FUNC_GenericCommand CmdSpawnThreads;
++FUNC_GenericCommand CmdTestSemaphores;
+diff --git a/src/HAL9000/semaphore.c b/src/HAL9000/semaphore.c
+new file mode 100644
+index 0000000..a972555
+--- /dev/null
++++ b/src/HAL9000/semaphore.c
+@@ -0,0 +1,129 @@
++#include "HAL9000.h"
++#include "thread_internal.h"
++#include "semaphore.h"
++
++/*
++* BUSY WAITING
++
++void
++SemaphoreInit(
++	OUT PSEMAPHORE	Semaphore,
++	IN	DWORD		InitialValue
++) {
++	INTR_STATE dummyState;
++
++	ASSERT(NULL != Semaphore);
++
++	memzero(Semaphore, sizeof(SEMAPHORE));
++
++	LockInit(&Semaphore->SemaphoreLock);
++
++	LockAcquire(&Semaphore->SemaphoreLock, &dummyState);
++	Semaphore->Value = InitialValue;
++	LockRelease(&Semaphore->SemaphoreLock, dummyState);
++}
++
++void
++SemaphoreUp(
++	INOUT	PSEMAPHORE	Semaphore,
++	IN      DWORD		Value
++) {
++	INTR_STATE dummyState;
++
++	ASSERT(NULL != Semaphore);
++
++	LockAcquire(&Semaphore->SemaphoreLock, &dummyState);
++	Semaphore->Value += Value;
++	LockRelease(&Semaphore->SemaphoreLock, dummyState);
++}
++
++void
++SemaphoreDown(
++	INOUT	PSEMAPHORE	Semaphore,
++	IN		DWORD		Value
++) {
++	INTR_STATE dummyState;
++
++	LockAcquire(&Semaphore->SemaphoreLock, &dummyState);
++
++	if (Semaphore->Value < Value) {
++		LockRelease(&Semaphore->SemaphoreLock, dummyState);
++		_mm_pause();
++		LockAcquire(&Semaphore->SemaphoreLock, &dummyState);
++	}
++
++	Semaphore->Value -= Value;
++
++	LockRelease(&Semaphore->SemaphoreLock, dummyState);
++}
++
++*/
++
++void
++SemaphoreInit(
++	OUT PSEMAPHORE	Semaphore,
++	IN	DWORD		InitialValue
++) {
++	ASSERT(NULL != Semaphore);
++
++	memzero(Semaphore, sizeof(SEMAPHORE));
++
++	LockInit(&Semaphore->SemaphoreLock);
++	InitializeListHead(&Semaphore->WaitingList);
++	Semaphore->Value = InitialValue;
++}
++
++void
++SemaphoreUp(
++	INOUT	PSEMAPHORE	Semaphore,
++	IN      DWORD		Value
++) {
++	INTR_STATE oldState;
++
++	ASSERT(NULL != Semaphore);
++
++	LockAcquire(&Semaphore->SemaphoreLock, &oldState);
++	
++	for (DWORD i = 0; i < Value && !IsListEmpty(&Semaphore->WaitingList); i++) {
++		PLIST_ENTRY pListEntry = RemoveHeadList(&Semaphore->WaitingList);
++		PTHREAD pThread = CONTAINING_RECORD(pListEntry, THREAD, ReadyList);
++		ThreadUnblock(pThread);
++	}
++
++	Semaphore->Value += Value;
++
++	LockRelease(&Semaphore->SemaphoreLock, oldState);
++}
++
++void
++SemaphoreDown(
++	INOUT	PSEMAPHORE	Semaphore,
++	IN		DWORD		Value
++) {
++	INTR_STATE dummyState;
++	INTR_STATE oldState;
++
++	ASSERT(NULL != Semaphore);
++	ASSERT(0 != Value);
++
++	oldState = CpuIntrDisable();
++
++	LockAcquire(&Semaphore->SemaphoreLock, &dummyState);
++
++	PTHREAD pCurrentThread = GetCurrentThread();
++	if (Semaphore->Value < Value) {
++		InsertTailList(&Semaphore->WaitingList, &pCurrentThread->ReadyList);
++
++		ThreadTakeBlockLock();
++		LockRelease(&Semaphore->SemaphoreLock, dummyState);
++
++		ThreadBlock();
++		LockAcquire(&Semaphore->SemaphoreLock, &dummyState);
++	}
++
++	Semaphore->Value -= Value;
++
++	LockRelease(&Semaphore->SemaphoreLock, dummyState);
++
++	CpuIntrSetState(oldState);
++}
+\ No newline at end of file
+diff --git a/src/HAL9000/semaphore.h b/src/HAL9000/semaphore.h
+new file mode 100644
+index 0000000..122ac45
+--- /dev/null
++++ b/src/HAL9000/semaphore.h
+@@ -0,0 +1,32 @@
++#pragma once
++
++#include "common_lib.h"
++#include "synch.h"
++#include "list.h"
++
++typedef struct _SEMAPHORE {
++	DWORD			Value; 
++	LOCK			SemaphoreLock;
++
++	// for block waiting
++	_Guarded_by_(SemaphoreLock)
++	LIST_ENTRY		WaitingList;
++} SEMAPHORE, * PSEMAPHORE;
++
++void
++SemaphoreInit (
++	OUT PSEMAPHORE	Semaphore,
++	IN	DWORD		InitialValue
++);
++
++void
++SemaphoreUp(
++	INOUT	PSEMAPHORE	Semaphore,
++	IN      DWORD		Value
++);
++
++void
++SemaphoreDown (
++	INOUT	PSEMAPHORE	Semaphore,
++	IN		DWORD		Value
++);
+\ No newline at end of file
+diff --git a/src/HAL9000/src/cmd_interpreter.c b/src/HAL9000/src/cmd_interpreter.c
+index d987fe9..7602d08 100644
+--- a/src/HAL9000/src/cmd_interpreter.c
++++ b/src/HAL9000/src/cmd_interpreter.c
+@@ -64,6 +64,7 @@ static const COMMAND_DEFINITION COMMANDS[] =
+     { "cpu", "Displays CPU related information", CmdListCpus, 0, 0},
+     { "int", "List interrupts received", CmdListCpuInterrupts, 0, 0},
+     { "yield", "Yields processor", CmdYield, 0, 0},
++    { "testmas", "Test Semaphores", CmdTestSemaphores, 0, 0},
+     { "timer", "$MODE [$TIME_IN_US] [$TIMES]\n\tSee EX_TIMER_TYPE for timer types\n\t$TIME_IN_US time in uS until timer fires"
+                 "\n\t$TIMES - number of times to wait for timer, valid only if periodic", CmdTestTimer, 1, 3},
+ 
+diff --git a/src/HAL9000/src/cmd_thread_helper.c b/src/HAL9000/src/cmd_thread_helper.c
+index 56e69af..4edd98a 100644
+--- a/src/HAL9000/src/cmd_thread_helper.c
++++ b/src/HAL9000/src/cmd_thread_helper.c
+@@ -16,6 +16,7 @@
+ #include "ex_timer.h"
+ #include "vmm.h"
+ #include "pit.h"
++#include "../semaphore.h"
+ 
+ 
+ #pragma warning(push)
+@@ -73,6 +74,39 @@ _CmdReadAndDumpCpuid(
+ 
+ static FUNC_ListFunction _CmdThreadPrint;
+ 
++STATUS
++(__cdecl IncrementSemaphoreForIpi)(
++    IN_OPT  PVOID   Context
++    ) {
++
++    PSEMAPHORE pSemaphore = (PSEMAPHORE) Context;
++
++    ASSERT(pSemaphore != NULL);
++
++    printColor(GRAY_COLOR, "Increasing semaphore with 1\n");
++    SemaphoreUp(pSemaphore, 1);
++
++    return STATUS_SUCCESS;
++}
++
++void
++(__cdecl CmdTestSemaphores)(
++    IN          QWORD       NumberOfParameters
++) {
++    ASSERT(0 == NumberOfParameters);
++
++    SEMAPHORE semaphore;
++    SemaphoreInit(&semaphore, 0);
++
++    SMP_DESTINATION smp_destination = { 0 };
++    SmpSendGenericIpiEx(IncrementSemaphoreForIpi, &semaphore, NULL, NULL, FALSE, SmpIpiSendToAllExcludingSelf, smp_destination);
++
++    printColor(GRAY_COLOR, "Decreasing semaphore with number of active CPUs in the system - 1\n");
++    SemaphoreDown(&semaphore, SmpGetNumberOfActiveCpus() - 1);
++
++    printColor(GREEN_COLOR, "/testsemas finished execution\n");
++}
++
+ void
+ (__cdecl CmdListCpus)(
+     IN          QWORD       NumberOfParameters
+diff --git a/src/HAL9000/src/mutex.c b/src/HAL9000/src/mutex.c
+index 9c82227..aca0d33 100644
+--- a/src/HAL9000/src/mutex.c
++++ b/src/HAL9000/src/mutex.c
+@@ -36,6 +36,12 @@ MutexAcquire(
+     ASSERT( NULL != Mutex);
+     ASSERT( NULL != pCurrentThread );
+ 
++    /*
++    * 3. a:
++    * This part of code deals with recursive mutexes. If the current thread tries
++    * to acquire the same lock multiple times and we have not reached the maximum
++    * recursivity depth, then we must increase the recursivity depth of the mutex
++    */
+     if (pCurrentThread == Mutex->Holder)
+     {
+         ASSERT( Mutex->CurrentRecursivityDepth < Mutex->MaxRecursivityDepth );
+@@ -46,6 +52,12 @@ MutexAcquire(
+ 
+     oldState = CpuIntrDisable();
+ 
++    /*
++    * 3. b:
++    * This lock is used to make sure there is no one trying to interrupt the 
++    * check and update of the mutex. We used a spinlock to make sure the 
++    * operations are performed atomically.
++    */
+     LockAcquire(&Mutex->MutexLock, &dummyState );
+     if (NULL == Mutex->Holder)
+     {
+@@ -53,6 +65,11 @@ MutexAcquire(
+         Mutex->CurrentRecursivityDepth = 1;
+     }
+ 
++    /*
++    * 3. c:
++    * The loop is needed in order to wait for the other thread that keeps the
++    * mutex busy to release it and than take it
++    */
+     while (Mutex->Holder != pCurrentThread)
+     {
+         InsertTailList(&Mutex->WaitingList, &pCurrentThread->ReadyList);
+@@ -97,6 +114,11 @@ MutexRelease(
+     {
+         PTHREAD pThread = CONTAINING_RECORD(pEntry, THREAD, ReadyList);
+ 
++        /*
++        * 4. a:
++        * We are setting the holder to the next thread in the waiting list because if
++        * it would be set to NULL, then another thread may come in and take the mutex.
++        */
+         // wakeup first thread
+         Mutex->Holder = pThread;
+         Mutex->CurrentRecursivityDepth = 1;
