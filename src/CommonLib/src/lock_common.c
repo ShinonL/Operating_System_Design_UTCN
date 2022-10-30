@@ -17,6 +17,17 @@ PFUNC_LockIsOwner        LockIsOwner = NULL;
 // warning C4028: formal parameter 1 different from declaration
 #pragma warning(disable:4028)
 
+/*
+* 5:
+*               Mutex                       |               SpinLock
+* ------------------------------------------------------------------------------------
+* - uses block-waiting                      | - uses busy-waiting 
+* - executive synchronization mechanism     | - primitive synchronization mechanism
+* - recommended for longer pieces of code   | - recommended for smaller pieces of code
+*   because of the block waiting mechanism  |   because of the busy waiting mechanism
+*   releasing the CPU when not used         |   keeping the CPU busy even if it is not
+*                                           |   used
+*/
 void
 LockSystemInit(
     IN      BOOLEAN             MonitorSupport

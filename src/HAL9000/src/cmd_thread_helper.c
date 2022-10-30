@@ -16,6 +16,7 @@
 #include "ex_timer.h"
 #include "vmm.h"
 #include "pit.h"
+#include "../semaphore.h"
 
 
 #pragma warning(push)
@@ -72,6 +73,39 @@ _CmdReadAndDumpCpuid(
     );
 
 static FUNC_ListFunction _CmdThreadPrint;
+
+STATUS
+(__cdecl IncrementSemaphoreForIpi)(
+    IN_OPT  PVOID   Context
+    ) {
+
+    PSEMAPHORE pSemaphore = (PSEMAPHORE) Context;
+
+    ASSERT(pSemaphore != NULL);
+
+    printColor(GRAY_COLOR, "Increasing semaphore with 1\n");
+    SemaphoreUp(pSemaphore, 1);
+
+    return STATUS_SUCCESS;
+}
+
+void
+(__cdecl CmdTestSemaphores)(
+    IN          QWORD       NumberOfParameters
+) {
+    ASSERT(0 == NumberOfParameters);
+
+    SEMAPHORE semaphore;
+    SemaphoreInit(&semaphore, 0);
+
+    SMP_DESTINATION smp_destination = { 0 };
+    SmpSendGenericIpiEx(IncrementSemaphoreForIpi, &semaphore, NULL, NULL, FALSE, SmpIpiSendToAllExcludingSelf, smp_destination);
+
+    printColor(GRAY_COLOR, "Decreasing semaphore with number of active CPUs in the system - 1\n");
+    SemaphoreDown(&semaphore, SmpGetNumberOfActiveCpus() - 1);
+
+    printColor(GREEN_COLOR, "/testsemas finished execution\n");
+}
 
 void
 (__cdecl CmdListCpus)(

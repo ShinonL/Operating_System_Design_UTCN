@@ -36,6 +36,12 @@ MutexAcquire(
     ASSERT( NULL != Mutex);
     ASSERT( NULL != pCurrentThread );
 
+    /*
+    * 3. a:
+    * This part of code deals with recursive mutexes. If the current thread tries
+    * to acquire the same lock multiple times and we have not reached the maximum
+    * recursivity depth, then we must increase the recursivity depth of the mutex
+    */
     if (pCurrentThread == Mutex->Holder)
     {
         ASSERT( Mutex->CurrentRecursivityDepth < Mutex->MaxRecursivityDepth );
@@ -46,6 +52,12 @@ MutexAcquire(
 
     oldState = CpuIntrDisable();
 
+    /*
+    * 3. b:
+    * This lock is used to make sure there is no one trying to interrupt the 
+    * check and update of the mutex. We used a spinlock to make sure the 
+    * operations are performed atomically.
+    */
     LockAcquire(&Mutex->MutexLock, &dummyState );
     if (NULL == Mutex->Holder)
     {
@@ -53,6 +65,11 @@ MutexAcquire(
         Mutex->CurrentRecursivityDepth = 1;
     }
 
+    /*
+    * 3. c:
+    * The loop is needed in order to wait for the other thread that keeps the
+    * mutex busy to release it and than take it
+    */
     while (Mutex->Holder != pCurrentThread)
     {
         InsertTailList(&Mutex->WaitingList, &pCurrentThread->ReadyList);
@@ -97,6 +114,11 @@ MutexRelease(
     {
         PTHREAD pThread = CONTAINING_RECORD(pEntry, THREAD, ReadyList);
 
+        /*
+        * 4. a:
+        * We are setting the holder to the next thread in the waiting list because if
+        * it would be set to NULL, then another thread may come in and take the mutex.
+        */
         // wakeup first thread
         Mutex->Holder = pThread;
         Mutex->CurrentRecursivityDepth = 1;

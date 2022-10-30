@@ -64,6 +64,7 @@ static const COMMAND_DEFINITION COMMANDS[] =
     { "cpu", "Displays CPU related information", CmdListCpus, 0, 0},
     { "int", "List interrupts received", CmdListCpuInterrupts, 0, 0},
     { "yield", "Yields processor", CmdYield, 0, 0},
+    { "testmas", "Test Semaphores", CmdTestSemaphores, 0, 0},
     { "timer", "$MODE [$TIME_IN_US] [$TIMES]\n\tSee EX_TIMER_TYPE for timer types\n\t$TIME_IN_US time in uS until timer fires"
                 "\n\t$TIMES - number of times to wait for timer, valid only if periodic", CmdTestTimer, 1, 3},
 
