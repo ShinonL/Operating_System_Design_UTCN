@@ -22,8 +22,8 @@ int _fltused = 1;
 void
 Entry64(
     IN  int                 argc,
-    IN  ASM_PARAMETERS*     argv
-    )
+    IN  ASM_PARAMETERS* argv
+)
 {
     STATUS status;
     COMMON_LIB_INIT initSettings;
@@ -59,6 +59,9 @@ Entry64(
 
     status = SystemInit(argv);
     ASSERT(SUCCEEDED(status));
+
+    LogSetLevel(LogLevelTrace);
+    LogSetTracedComponents(LogComponentThread);
 
     LOGL("InitSystem executed successfully\n");
 

@@ -28,7 +28,7 @@ STATIC_ASSERT(NO_OF_TSS_STACKS <= NO_OF_IST);
 typedef struct _SYSTEM_DATA
 {
     BYTE        NumberOfTssStacks;
-} SYSTEM_DATA, *PSYSTEM_DATA;
+} SYSTEM_DATA, * PSYSTEM_DATA;
 
 static SYSTEM_DATA m_systemData;
 
@@ -37,7 +37,7 @@ QWORD gVirtualToPhysicalOffset;
 void
 SystemPreinit(
     void
-    )
+)
 {
     memzero(&m_systemData, sizeof(SYSTEM_DATA));
 
@@ -61,8 +61,8 @@ SystemPreinit(
 
 STATUS
 SystemInit(
-    IN  ASM_PARAMETERS*     Parameters
-    )
+    IN  ASM_PARAMETERS* Parameters
+)
 {
     STATUS status;
     PCPU* pCpu;
@@ -70,10 +70,10 @@ SystemInit(
     status = STATUS_SUCCESS;
     pCpu = NULL;
 
-    LogSystemInit(LogLevelInfo,
-                  LogComponentInterrupt | LogComponentIo | LogComponentAcpi,
-                  TRUE
-                  );
+    LogSystemInit(LogLevelError,
+        LogComponentInterrupt | LogComponentIo | LogComponentAcpi,
+        TRUE
+    );
 
     // if validation fails => the system will HALT
     CpuMuValidateConfiguration();
@@ -101,7 +101,7 @@ SystemInit(
         OsGetBuildType(),
         OsGetVersion(),
         OsGetBuildDate()
-        );
+    );
 
     status = OsInfoInit();
     if (!SUCCEEDED(status))
@@ -134,10 +134,10 @@ SystemInit(
     LOGL("InitIdtHandlers succeeded\n");
 
     status = MmuInitSystem(Parameters->KernelBaseAddress,
-                           (DWORD) Parameters->KernelSize,
-                           Parameters->MemoryMapAddress,
-                           Parameters->MemoryMapEntries
-                           );
+        (DWORD)Parameters->KernelSize,
+        Parameters->MemoryMapAddress,
+        Parameters->MemoryMapEntries
+    );
     if (!SUCCEEDED(status))
     {
         LOG_FUNC_ERROR("MmuInitSystem", status);
@@ -149,7 +149,7 @@ SystemInit(
     if (IsBooleanFlagOn(Parameters->MultibootInformation->Flags, MULTIBOOT_FLAG_BOOT_MODULES_PRESENT))
     {
         status = BootModulesInit((PHYSICAL_ADDRESS)(QWORD)Parameters->MultibootInformation->ModuleAddress,
-                                Parameters->MultibootInformation->ModuleCount);
+            Parameters->MultibootInformation->ModuleCount);
         if (!SUCCEEDED(status))
         {
             LOG_FUNC_ERROR("BootModulesMap", status);
@@ -195,12 +195,12 @@ SystemInit(
     // this needs to be before the call to IomuInitSystem because
     // by the time we enable interrupts we want our TSS descriptor to be installed
     status = CpuMuAllocAndInitCpu(&pCpu,
-    // C28039: The type of actual parameter 'CpuGetApicId()' should exactly match the type 'APIC_ID'
+        // C28039: The type of actual parameter 'CpuGetApicId()' should exactly match the type 'APIC_ID'
 #pragma warning(suppress: 28039)
-                                  CpuGetApicId(),
-                                  STACK_DEFAULT_SIZE,
-                                  m_systemData.NumberOfTssStacks
-                                  );
+        CpuGetApicId(),
+        STACK_DEFAULT_SIZE,
+        m_systemData.NumberOfTssStacks
+    );
     if (!SUCCEEDED(status))
     {
         LOG_FUNC_ERROR("CpuMuAllocAndInitCpu", status);
@@ -210,7 +210,7 @@ SystemInit(
 
     // initialize IO system
     // this also initializes the IDT
-    status = IomuInitSystem(GdtMuGetCS64Supervisor(),m_systemData.NumberOfTssStacks );
+    status = IomuInitSystem(GdtMuGetCS64Supervisor(), m_systemData.NumberOfTssStacks);
     if (!SUCCEEDED(status))
     {
         LOG_FUNC_ERROR("IomuInitSystem", status);
@@ -288,7 +288,7 @@ SystemInit(
     status = MmuInitThreadingSystem();
     if (!SUCCEEDED(status))
     {
-        LOG_FUNC_ERROR("MmuInitThreadingSystem", status );
+        LOG_FUNC_ERROR("MmuInitThreadingSystem", status);
         return status;
     }
 
@@ -319,7 +319,7 @@ SystemInit(
 void
 SystemUninit(
     void
-    )
+)
 {
     LOGL("Finished command execution\n");
 
