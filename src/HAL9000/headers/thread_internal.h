@@ -35,10 +35,12 @@ typedef struct _THREAD
 {
     REF_COUNT               RefCnt;
 
-    struct _THREAD          *Self;
+    struct _THREAD* Self;
 
     TID                     Id;
-    char*                   Name;
+    char* Name;
+
+    TID                    ParentId;
 
     // Currently the thread priority is not used for anything
     THREAD_PRIORITY         Priority;
@@ -89,8 +91,8 @@ typedef struct _THREAD
     // MUST be non-NULL for all threads which belong to user-mode processes
     PVOID                   UserStack;
 
-    struct _PROCESS*        Process;
-} THREAD, *PTHREAD;
+    struct _PROCESS* Process;
+} THREAD, * PTHREAD;
 
 //******************************************************************************
 // Function:     ThreadSystemPreinit
@@ -104,7 +106,7 @@ void
 _No_competing_thread_
 ThreadSystemPreinit(
     void
-    );
+);
 
 //******************************************************************************
 // Function:     ThreadSystemInitMainForCurrentCPU
@@ -118,7 +120,7 @@ ThreadSystemPreinit(
 STATUS
 ThreadSystemInitMainForCurrentCPU(
     void
-    );
+);
 
 //******************************************************************************
 // Function:     ThreadSystemInitIdleForCurrentCPU
@@ -132,7 +134,7 @@ ThreadSystemInitMainForCurrentCPU(
 STATUS
 ThreadSystemInitIdleForCurrentCPU(
     void
-    );
+);
 
 //******************************************************************************
 // Function:     ThreadCreateEx
@@ -149,13 +151,13 @@ ThreadSystemInitIdleForCurrentCPU(
 //******************************************************************************
 STATUS
 ThreadCreateEx(
-    IN_Z        char*               Name,
+    IN_Z        char* Name,
     IN          THREAD_PRIORITY     Priority,
     IN          PFUNC_ThreadStart   Function,
     IN_OPT      PVOID               Context,
-    OUT_PTR     PTHREAD*            Thread,
-    INOUT       struct _PROCESS*    Process
-    );
+    OUT_PTR     PTHREAD* Thread,
+    INOUT       struct _PROCESS* Process
+);
 
 //******************************************************************************
 // Function:     ThreadTick
@@ -168,7 +170,7 @@ ThreadCreateEx(
 void
 ThreadTick(
     void
-    );
+);
 
 //******************************************************************************
 // Function:     ThreadBlock
@@ -180,7 +182,7 @@ ThreadTick(
 void
 ThreadBlock(
     void
-    );
+);
 
 //******************************************************************************
 // Function:     ThreadUnblock
@@ -194,7 +196,7 @@ ThreadBlock(
 void
 ThreadUnblock(
     IN      PTHREAD              Thread
-    );
+);
 
 //******************************************************************************
 // Function:     ThreadYieldOnInterrupt
@@ -206,7 +208,7 @@ ThreadUnblock(
 BOOLEAN
 ThreadYieldOnInterrupt(
     void
-    );
+);
 
 //******************************************************************************
 // Function:     ThreadTerminate
@@ -222,7 +224,7 @@ ThreadYieldOnInterrupt(
 void
 ThreadTerminate(
     INOUT   PTHREAD             Thread
-    );
+);
 
 //******************************************************************************
 // Function:     ThreadTakeBlockLock
@@ -236,7 +238,7 @@ ThreadTerminate(
 void
 ThreadTakeBlockLock(
     void
-    );
+);
 
 //******************************************************************************
 // Function:     ThreadExecuteForEachThreadEntry
@@ -250,7 +252,21 @@ STATUS
 ThreadExecuteForEachThreadEntry(
     IN      PFUNC_ListFunction  Function,
     IN_OPT  PVOID               Context
-    );
+);
+
+//******************************************************************************
+// Function:     ThreadExecuteForEachReadyThreadEntry
+// Description:  Iterates over the ready threads list and invokes Function on each
+//               entry passing an additional optional Context parameter.
+// Returns:      STATUS
+// Parameter:    IN PFUNC_ListFunction Function
+// Parameter:    IN_OPT PVOID Context
+//******************************************************************************
+STATUS
+ThreadExecuteForEachReadyThreadEntry(
+    IN      PFUNC_ListFunction  Function,
+    IN_OPT  PVOID               Context
+);
 
 
 //******************************************************************************O
@@ -269,7 +285,7 @@ ThreadExecuteForEachThreadEntry(
 void
 SetCurrentThread(
     IN      PTHREAD     Thread
-    );
+);
 
 //******************************************************************************
 // Function:     ThreadSetPriority
@@ -281,4 +297,4 @@ SetCurrentThread(
 void
 ThreadSetPriority(
     IN      THREAD_PRIORITY     NewPriority
-    );
+);

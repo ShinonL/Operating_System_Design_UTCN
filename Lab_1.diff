@@ -1,0 +1,239 @@
+diff --git a/PXE/Tests.module b/PXE/Tests.module
+index e69de29..5c2a88a 100644
+--- a/PXE/Tests.module
++++ b/PXE/Tests.module
+@@ -0,0 +1 @@
++/threads
+diff --git a/src/HAL9000/headers/cmd_thread_helper.h b/src/HAL9000/headers/cmd_thread_helper.h
+index 0461ea0..b62f4c2 100644
+--- a/src/HAL9000/headers/cmd_thread_helper.h
++++ b/src/HAL9000/headers/cmd_thread_helper.h
+@@ -4,6 +4,7 @@
+ 
+ FUNC_GenericCommand CmdListCpus;
+ FUNC_GenericCommand CmdListThreads;
++FUNC_GenericCommand CmdListReadyThreads;
+ FUNC_GenericCommand CmdYield;
+ FUNC_GenericCommand CmdRunTest;
+ FUNC_GenericCommand CmdSendIpi;
+diff --git a/src/HAL9000/headers/thread_internal.h b/src/HAL9000/headers/thread_internal.h
+index 789fe68..63ae5e2 100644
+--- a/src/HAL9000/headers/thread_internal.h
++++ b/src/HAL9000/headers/thread_internal.h
+@@ -40,6 +40,8 @@ typedef struct _THREAD
+     TID                     Id;
+     char*                   Name;
+ 
++    TID                    ParentId;
++
+     // Currently the thread priority is not used for anything
+     THREAD_PRIORITY         Priority;
+     THREAD_STATE            State;
+@@ -252,6 +254,20 @@ ThreadExecuteForEachThreadEntry(
+     IN_OPT  PVOID               Context
+     );
+ 
++//******************************************************************************
++// Function:     ThreadExecuteForEachReadyThreadEntry
++// Description:  Iterates over the ready threads list and invokes Function on each
++//               entry passing an additional optional Context parameter.
++// Returns:      STATUS
++// Parameter:    IN PFUNC_ListFunction Function
++// Parameter:    IN_OPT PVOID Context
++//******************************************************************************
++STATUS
++ThreadExecuteForEachReadyThreadEntry(
++    IN      PFUNC_ListFunction  Function,
++    IN_OPT  PVOID               Context
++);
++
+ 
+ //******************************************************************************O
+ // Function:     GetCurrentThread
+diff --git a/src/HAL9000/src/cmd_interpreter.c b/src/HAL9000/src/cmd_interpreter.c
+index d987fe9..96945cc 100644
+--- a/src/HAL9000/src/cmd_interpreter.c
++++ b/src/HAL9000/src/cmd_interpreter.c
+@@ -68,6 +68,7 @@ static const COMMAND_DEFINITION COMMANDS[] =
+                 "\n\t$TIMES - number of times to wait for timer, valid only if periodic", CmdTestTimer, 1, 3},
+ 
+     { "threads", "Displays all threads", CmdListThreads, 0, 0},
++    { "readythreads", "Displays all ready threads", CmdListReadyThreads, 0, 0},
+     { "run", "$TEST [$NO_OF_THREADS]\n\tRuns the $TEST specified"
+              "\n\t$NO_OF_THREADS the number of threads for running the test,"
+              "if the number is not specified then it will run on 2 * NumberOfProcessors",
+diff --git a/src/HAL9000/src/cmd_thread_helper.c b/src/HAL9000/src/cmd_thread_helper.c
+index 56e69af..6aa49f8 100644
+--- a/src/HAL9000/src/cmd_thread_helper.c
++++ b/src/HAL9000/src/cmd_thread_helper.c
+@@ -16,6 +16,7 @@
+ #include "ex_timer.h"
+ #include "vmm.h"
+ #include "pit.h"
++#include "thread.h"
+ 
+ 
+ #pragma warning(push)
+@@ -129,8 +130,10 @@ void
+ 
+     ASSERT(NumberOfParameters == 0);
+ 
++    LOG("Number of Threads: %U\n", ThreadGetNoThreads());
+     LOG("%7s", "TID|");
+     LOG("%20s", "Name|");
++    LOG("%7s", "ParentId|");
+     LOG("%5s", "Prio|");
+     LOG("%8s", "State|");
+     LOG("%10s", "Cmp ticks|");
+@@ -143,6 +146,31 @@ void
+     ASSERT( SUCCEEDED(status));
+ }
+ 
++void
++(__cdecl CmdListReadyThreads)(
++    IN          QWORD       NumberOfParameters
++    )
++{
++    STATUS status;
++
++    ASSERT(NumberOfParameters == 0);
++
++    LOG("%7s", "TID|");
++    LOG("%20s", "Name|");
++    LOG("%7s", "ParentId|");
++    LOG("%5s", "Prio|");
++    LOG("%8s", "State|");
++    LOG("%10s", "Cmp ticks|");
++    LOG("%10s", "Prt ticks|");
++    LOG("%10s", "Ttl ticks|");
++    LOG("%10s", "Process|");
++    LOG("\n");
++
++    status = ThreadExecuteForEachReadyThreadEntry(_CmdThreadPrint, NULL);
++    ASSERT(SUCCEEDED(status));
++}
++
++
+ void
+ (__cdecl CmdYield)(
+     IN          QWORD       NumberOfParameters
+@@ -687,6 +715,7 @@ STATUS
+ 
+     LOG("%6x%c", pThread->Id, '|');
+     LOG("%19s%c", pThread->Name, '|');
++    LOG("%6x%c", pThread->ParentId, '|');
+     LOG("%4U%c", pThread->Priority, '|');
+     LOG("%7s%c", _CmdThreadStateToName(pThread->State), '|');
+     LOG("%9U%c", pThread->TickCountCompleted, '|');
+diff --git a/src/HAL9000/src/iomu.c b/src/HAL9000/src/iomu.c
+index cf49feb..f4be828 100644
+--- a/src/HAL9000/src/iomu.c
++++ b/src/HAL9000/src/iomu.c
+@@ -28,7 +28,7 @@
+ #define PIC_MASTER_OFFSET                   0x20
+ #define PIC_SLAVE_OFFSET                    0x28
+ 
+-#define SCHEDULER_TIMER_INTERRUPT_TIME_US   (40*MS_IN_US)
++#define SCHEDULER_TIMER_INTERRUPT_TIME_US   (10*MS_IN_US)
+ 
+ #define HAL9000_SYSTEM_FILE_NAME            "HAL9000.ini"
+ 
+diff --git a/src/HAL9000/src/thread.c b/src/HAL9000/src/thread.c
+index 3ec2095..1bf09ff 100644
+--- a/src/HAL9000/src/thread.c
++++ b/src/HAL9000/src/thread.c
+@@ -10,9 +10,9 @@
+ #include "gdtmu.h"
+ #include "pe_exports.h"
+ 
+-#define TID_INCREMENT               4
++#define TID_INCREMENT               0x10
+ 
+-#define THREAD_TIME_SLICE           1
++#define THREAD_TIME_SLICE           4
+ 
+ extern void ThreadStart();
+ 
+@@ -36,6 +36,8 @@ typedef struct _THREAD_SYSTEM_DATA
+ 
+     _Guarded_by_(ReadyThreadsLock)
+     LIST_ENTRY          ReadyThreadsList;
++
++    QWORD               NoThreads;
+ } THREAD_SYSTEM_DATA, *PTHREAD_SYSTEM_DATA;
+ 
+ static THREAD_SYSTEM_DATA m_threadSystemData;
+@@ -562,6 +564,8 @@ ThreadExit(
+     pThread->ExitStatus = ExitStatus;
+     ExEventSignal(&pThread->TerminationEvt);
+ 
++    LOG("Terminated Thread  -->   Thread name: %s     TID:  %U\n", pThread->Name, pThread->Id);
++
+     ProcessNotifyThreadTermination(pThread);
+ 
+     LockAcquire(&m_threadSystemData.ReadyThreadsLock, &oldState);
+@@ -653,6 +657,11 @@ ThreadGetPriority(
+     return (NULL != pThread) ? pThread->Priority : 0;
+ }
+ 
++QWORD
++ThreadGetNoThreads() {
++    return m_threadSystemData.NoThreads;
++}
++
+ void
+ ThreadSetPriority(
+     IN      THREAD_PRIORITY     NewPriority
+@@ -690,6 +699,33 @@ ThreadExecuteForEachThreadEntry(
+     return status;
+ }
+ 
++STATUS
++ThreadExecuteForEachReadyThreadEntry(
++    IN      PFUNC_ListFunction  Function,
++    IN_OPT  PVOID               Context
++)
++{
++    STATUS status;
++    INTR_STATE oldState;
++
++    if (NULL == Function)
++    {
++        return STATUS_INVALID_PARAMETER1;
++    }
++
++    status = STATUS_SUCCESS;
++
++    LockAcquire(&m_threadSystemData.ReadyThreadsLock, &oldState);
++    status = ForEachElementExecute(&m_threadSystemData.ReadyThreadsList,
++        Function,
++        Context,
++        FALSE
++    );
++    LockRelease(&m_threadSystemData.ReadyThreadsLock, oldState);
++
++    return status;
++}
++
+ void
+ SetCurrentThread(
+     IN      PTHREAD     Thread
+@@ -793,6 +829,7 @@ _ThreadInit(
+         pThread->Id = _ThreadSystemGetNextTid();
+         pThread->State = ThreadStateBlocked;
+         pThread->Priority = Priority;
++        pThread->ParentId = GetCurrentThread() != NULL ? GetCurrentThread()->Id : 0;
+ 
+         LockInit(&pThread->BlockLock);
+ 
+@@ -809,6 +846,10 @@ _ThreadInit(
+                 _ThreadDereference(pThread);
+                 pThread = NULL;
+             }
++        } 
++        else {
++            LOG("Created Thread  -->   Thread name: %s     TID:  %U\n", pThread->Name, pThread->Id);
++            m_threadSystemData.NoThreads++;
+         }
+ 
+         *Thread = pThread;

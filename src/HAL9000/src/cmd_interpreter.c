@@ -31,14 +31,14 @@ static FUNC_GenericCommand  _CmdPrintHelp;
 
 typedef struct _COMMAND_DEFINITION
 {
-    char*                   CommandName;
-    char*                   Description;
+    char* CommandName;
+    char* Description;
 
     PFUNC_GenericCommand    CommandFunction;
 
     QWORD                   MinParameters;
     QWORD                   MaxParameters;
-} COMMAND_DEFINITION, *PCOMMAND_DEFINITION;
+} COMMAND_DEFINITION, * PCOMMAND_DEFINITION;
 
 static const COMMAND_DEFINITION COMMANDS[] =
 {
@@ -68,6 +68,7 @@ static const COMMAND_DEFINITION COMMANDS[] =
                 "\n\t$TIMES - number of times to wait for timer, valid only if periodic", CmdTestTimer, 1, 3},
 
     { "threads", "Displays all threads", CmdListThreads, 0, 0},
+    { "readythreads", "Displays all ready threads", CmdListReadyThreads, 0, 0},
     { "run", "$TEST [$NO_OF_THREADS]\n\tRuns the $TEST specified"
              "\n\t$NO_OF_THREADS the number of threads for running the test,"
              "if the number is not specified then it will run on 2 * NumberOfProcessors",
@@ -116,15 +117,15 @@ static
 BOOLEAN
 _CmdExecLine(
     _Inout_updates_z_(Length)
-                    char*   CommandLine,
+    char* CommandLine,
     IN              DWORD   Length
-    );
+);
 
 static
 BOOLEAN
 _CmdExecuteModuleCommands(
     void
-    );
+);
 
 // SAL simply doesn't want to let me tell him that each pointer in argv is NULL terminated
 // _At_buffer_(argv, i, argc,
@@ -133,8 +134,8 @@ BOOLEAN
 ExecCmd(
     IN      DWORD       argc,
     IN_READS(CMD_MAX_ARGS)
-            char**      argv
-    )
+    char** argv
+)
 {
     char* pCommand;
     BOOLEAN bFoundCommand;
@@ -143,7 +144,7 @@ ExecCmd(
     ASSERT(1 <= argc && argc <= CMD_MAX_ARGS);
     ASSERT(NULL != argv);
 
-    pCommand = (char*) argv[0];
+    pCommand = (char*)argv[0];
     bFoundCommand = FALSE;
     noOfParameters = argc - 1;
 
@@ -164,22 +165,22 @@ ExecCmd(
             if (COMMANDS[i].MinParameters <= noOfParameters && noOfParameters <= COMMANDS[i].MaxParameters)
             {
                 COMMANDS[i].CommandFunction(noOfParameters,
-                                            argv[1],
-                                            argv[2],
-                                            argv[3],
-                                            argv[4],
-                                            argv[5],
-                                            argv[6],
-                                            argv[7],
-                                            argv[8],
-                                            argv[CMD_MAX_ARGS - 1]);
+                    argv[1],
+                    argv[2],
+                    argv[3],
+                    argv[4],
+                    argv[5],
+                    argv[6],
+                    argv[7],
+                    argv[8],
+                    argv[CMD_MAX_ARGS - 1]);
 
                 break;
             }
             else
             {
                 LOG_ERROR("Tried to call command [%s] which requires between %u and %u parameters with %u parameters!\n",
-                          COMMANDS[i].CommandName, COMMANDS[i].MinParameters, COMMANDS[i].MaxParameters, noOfParameters);
+                    COMMANDS[i].CommandName, COMMANDS[i].MinParameters, COMMANDS[i].MaxParameters, noOfParameters);
                 LOG("%s\n", COMMANDS[i].Description);
             }
         }
@@ -196,7 +197,7 @@ ExecCmd(
 void
 CmdRun(
     void
-    )
+)
 {
     BOOLEAN exit;
     char buffer[CHARS_PER_LINE];
@@ -219,9 +220,9 @@ static
 BOOLEAN
 _CmdExecLine(
     _Inout_updates_z_(Length)
-                    char*   CommandLine,
+    char* CommandLine,
     IN              DWORD   Length
-    )
+)
 {
     BOOLEAN bExit;
     char* pCmdArgs[CMD_MAX_ARGS];
@@ -294,7 +295,7 @@ static
 BOOLEAN
 _CmdExecuteModuleCommands(
     void
-    )
+)
 {
     STATUS status;
     char* pBaseAddress;
