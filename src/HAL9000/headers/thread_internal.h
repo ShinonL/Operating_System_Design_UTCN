@@ -31,6 +31,26 @@ typedef DWORD           THREAD_FLAGS;
 #define THREAD_FLAG_FORCE_TERMINATE_PENDING         0x1
 #define THREAD_FLAG_FORCE_TERMINATED                0x2
 
+/*
+* 1.
+*   a. A thread waiting for user keyboard input - IO Bound
+*   b. A thread logging on the screen           - CPU Bound
+*   c. A thread sorting an array                - CPU Bound
+*   d. A thread reading a file from the disk    - IO Bound
+* 
+* 2. The threads that should have a better response time are the IO Bound threads.
+*   Once one of the IO components receives a message, the IO bound threads should
+*   have a higher priority in securing a CPU.
+* 
+* 3. The CPU bound threads have a higher running time. CPU bound threads deal with
+*   a lot more computation than the IO bound ones, so their usage of the CPU will 
+*   be longer.
+* 
+* 4. The IO bound threads has the TickCountEarly higher, because thry have to either 
+*   wait for the IO resource to be available or are unforcefully yielded more often 
+*   because of their short running time.
+*/
+
 typedef struct _THREAD
 {
     REF_COUNT               RefCnt;

@@ -59,6 +59,17 @@ SystemPreinit(
     ProcessSystemPreinit();
 }
 
+static
+STATUS
+(__cdecl _HelloIpi)(
+    IN_OPT PVOID Context
+    ) {
+    UNREFERENCED_PARAMETER(Context);
+
+    LOGP("Hello\n");
+    return STATUS_SUCCESS;
+}
+
 STATUS
 SystemInit(
     IN  ASM_PARAMETERS*     Parameters
@@ -312,6 +323,61 @@ SystemInit(
     }
 
     LOGL("Network stack successfully initialized\n");
+
+    /*
+    * Part I. c:
+    *
+    *   When HAL9000 boots, each CPU (except the one sending the Ipi) will 
+    * send a "Hello" message.
+    * 
+    *   The last parameter is a boolean flag that signals if the CPU should
+    * wait for the execution of the BroadcastFunction to finish or not.
+    * 
+    *   When it is set to true, we can see that each CPU prints in "order"
+    * their hello message. That is because we are telling them we are waiting
+    * for them to finish the execution of the broadcast function. When it is
+    * set to false, each CPU responds whenever he finishes the execution,
+    * without waiting for the others.
+    * 
+    *   status = SmpSendGenericIpi(_HelloIpi, NULL, NULL, NULL, TRUE);
+    *   if (!SUCCEEDED(status)) {
+    *       LOG_FUNC_ERROR("SmpSendGenericIpi", status);
+    *       return status;
+    *   }
+    */
+
+    /*
+    * Part I. d:
+    *   SMP_DESTINATION smp_destination = { 0 };
+    *   status = SmpSendGenericIpiEx(_HelloIpi, NULL, NULL, NULL, FALSE, SmpIpiSendToAllIncludingSelf, smp_destination);
+    *   if (!SUCCEEDED(status)) {
+    *       LOG_FUNC_ERROR("SmpSendGenericIpiEx", status);
+    *       return status;
+    *   }
+    */
+
+    /*
+    * Part I. e:
+    *   SMP_DESTINATION smp_destination = { 0 };
+    *   smp_destination.Cpu.ApicId = (APIC_ID) SmpGetNumberOfActiveCpus() - 1;
+    *   status = SmpSendGenericIpiEx(_HelloIpi, NULL, NULL, NULL, FALSE, SmpIpiSendToCpu, smp_destination);
+    *   if (!SUCCEEDED(status)) {
+    *       LOG_FUNC_ERROR("SmpSendGenericIpiEx", status);
+    *       return status;
+    *   }
+    */
+
+    /*DWORD temp;
+
+    atoi32(&temp, "1010101", );
+
+    SMP_DESTINATION smp_destination = { 0 };
+    smp_destination.Group.Affinity = (bY);
+    status = SmpSendGenericIpiEx(_HelloIpi, NULL, NULL, NULL, FALSE, SmpIpiSendToGroup, smp_destination);
+    if (!SUCCEEDED(status)) {
+        LOG_FUNC_ERROR("SmpSendGenericIpiEx", status);
+        return status;
+    }*/
 
     return status;
 }

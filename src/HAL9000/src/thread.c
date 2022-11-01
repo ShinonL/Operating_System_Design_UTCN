@@ -438,6 +438,11 @@ ThreadTick(
     {
         pCpu->ThreadData.KernelTicks++;
     }
+
+    /*
+    * 4. Here TickCountCompleted is incremented. This structure counts how many
+    *   "full" clock ticks the thread completed
+    */
     pThread->TickCountCompleted++;
 
     if (++pCpu->ThreadData.RunningThreadTicks >= THREAD_TIME_SLICE)
@@ -482,6 +487,11 @@ ThreadYield(
     }
     if (!bForcedYield)
     {
+        /*
+        * 4. Here is one of the places where TickCountEarly is incremented. This
+        *   structure counts how many times a thread was interrupted, this could
+        *   happen either from an Yield (as we can see here) or on a Block.
+        */
         pThread->TickCountEarly++;
     }
     pThread->State = ThreadStateReady;
@@ -511,6 +521,11 @@ ThreadBlock(
         NOT_REACHED;
     }
 
+    /*
+    * 4. Here is one of the places where TickCountEarly is incremented. This
+    *   structure counts how many times a thread was interrupted, this could
+    *   happen either from an Yield or on a Block (as we can see here).
+    */
     pCurrentThread->TickCountEarly++;
     pCurrentThread->State = ThreadStateBlocked;
     LockAcquire(&m_threadSystemData.ReadyThreadsLock, &oldState);
