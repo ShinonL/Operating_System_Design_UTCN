@@ -950,7 +950,12 @@ _ThreadSetupMainThreadUserStack(
     ASSERT(ResultingStack != NULL);
     ASSERT(Process != NULL);
 
-    *ResultingStack = InitialStack;
+    // *ResultingStack = InitialStack;
+    /* 
+    * 3. The caller has to reserve space for their callee's shadow space before running a call instruction.
+    *   This is definetley not the final implementation, but it is a starting point.
+    */
+    *ResultingStack = (PVOID)PtrDiff(InitialStack, SHADOW_STACK_SIZE + sizeof(PVOID));
 
     return STATUS_SUCCESS;
 }

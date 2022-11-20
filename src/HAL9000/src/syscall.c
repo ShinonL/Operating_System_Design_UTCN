@@ -7,7 +7,28 @@
 #include "mmu.h"
 #include "process_internal.h"
 #include "dmp_cpu.h"
+#include "thread.h"
 
+/*
+* Unserstanding user application and system calls
+* 0. Thay have to be copied because they are not a part of the OS.
+* 
+* 1. The UsermodeLibrary represents application’s entry point.
+* 2.
+*       STATUS
+*       __main(
+*           DWORD       argc,
+*           char**      argv
+*           )
+*       {
+*/
+
+
+/*
+* In order to dispatch a Syscall, we use the extern function SyscallEntry
+* with one parameter being the SysCallId and then a kind of "Context" containing
+* as many parameters as needed for the syscall.
+*/
 extern void SyscallEntry();
 
 #define SYSCALL_IF_VERSION_KM       SYSCALL_IMPLEMENTED_IF_VERSION
@@ -68,6 +89,15 @@ SyscallHandler(
             status = SyscallValidateInterface((SYSCALL_IF_VERSION)*pSyscallParameters);
             break;
         // STUDENT TODO: implement the rest of the syscalls
+        case SyscallIdFileWrite:
+            status = SyscallFileWrite((UM_HANDLE) pSyscallParameters[0], (PVOID) pSyscallParameters[1], (QWORD) pSyscallParameters[2], NULL);
+            break;
+        case SyscallIdProcessExit:
+            SyscallProcessExit((STATUS)pSyscallParameters[0]);
+            break;
+        case SyscallIdThreadExit:
+            SyscallThreadExit((STATUS)pSyscallParameters[0]);
+            break;
         default:
             LOG_ERROR("Unimplemented syscall called from User-space!\n");
             status = STATUS_UNSUPPORTED;
@@ -170,3 +200,45 @@ SyscallValidateInterface(
 }
 
 // STUDENT TODO: implement the rest of the syscalls
+STATUS
+SyscallFileWrite(
+    IN  UM_HANDLE                   FileHandle,
+    IN_READS_BYTES(BytesToWrite)
+    PVOID                       Buffer,
+    IN  QWORD                       BytesToWrite,
+    OUT QWORD* BytesWritten
+) {
+   UNREFERENCED_PARAMETER(BytesWritten);
+   UNREFERENCED_PARAMETER(BytesToWrite);
+   UNREFERENCED_PARAMETER(Buffer);
+
+   if (FileHandle == UM_FILE_HANDLE_STDOUT) {
+       LOG("[%s]:[%s]\n", ProcessGetName(NULL), Buffer);
+       return STATUS_SUCCESS;
+   }
+
+   return STATUS_NO_HANDLING_REQUIRED;
+}
+
+STATUS
+SyscallProcessExit(
+    IN      STATUS                  ExitStatus
+) {
+    PPROCESS Process = GetCurrentProcess();
+    Process->TerminationStatus = ExitStatus;
+
+    ProcessTerminate(Process);
+    LOG("Process has terminated\n");
+
+    return STATUS_SUCCESS;
+}
+
+STATUS
+SyscallThreadExit(
+    IN  STATUS                      ExitStatus
+) {
+    ThreadExit(ExitStatus);
+    LOG("Thread has exited\n");
+
+    return STATUS_SUCCESS;
+}

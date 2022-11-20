@@ -70,10 +70,8 @@ SystemInit(
     status = STATUS_SUCCESS;
     pCpu = NULL;
 
-    LogSystemInit(LogLevelInfo,
-                  LogComponentInterrupt | LogComponentIo | LogComponentAcpi,
-                  TRUE
-                  );
+    // 1.
+    LogSystemInit(LogLevelTrace, LogComponentUserMode, TRUE);
 
     // if validation fails => the system will HALT
     CpuMuValidateConfiguration();
