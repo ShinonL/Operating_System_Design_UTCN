@@ -9,7 +9,8 @@
 #define LOG_ATC(lvl,comp,buf,...)               LogEx((lvl),(comp),buf,__VA_ARGS__)
 
 #define LOG_AT(lvl,buf,...)                     LOG_ATC((lvl),LogComponentGeneric,(buf),__VA_ARGS__)
-#define LOG_ATLC(lvl,comp,buf,...)              LOG_ATC((lvl),(comp),"[%s][%d]"##buf, strrchr(__FILE__,'\\') + 1, __LINE__, __VA_ARGS__)
+// Threads 3 - added for debug
+#define LOG_ATLC(lvl,comp,buf,...)              LOG_ATC((lvl),(comp),"[%s][%s][%d]"##buf, strrchr(__FILE__,'\\') + 1, __FUNCTION__, __LINE__, __VA_ARGS__)
 
 #define LOG(buf,...)                            LOG_AT(LogLevelInfo, buf, __VA_ARGS__)
 #define LOGP(buf,...)                           LOG_AT(LogLevelInfo, "[CPU:%02x]"##buf, CpuGetApicId(), __VA_ARGS__ )

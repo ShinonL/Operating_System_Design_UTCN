@@ -143,6 +143,22 @@ void
     ASSERT( SUCCEEDED(status));
 }
 
+// Threads 4
+void
+(__cdecl CmdPrintThreadInfo)(
+    IN          QWORD       NumberOfParameters
+    )
+{
+    ASSERT(NumberOfParameters == 0);
+
+    LOG("\n");
+
+    LOG("No Existing Threads = %D\n", GetNoExistingThreads());
+    LOG("No Ready Threads = %D\n", GetNoReadyThreads());
+    LOG("No Blocked Threads = %D\n", GetNoBlockedThreads());
+    LOG("\n");
+}
+
 void
 (__cdecl CmdYield)(
     IN          QWORD       NumberOfParameters
@@ -671,6 +687,33 @@ _CmdHelperPrintThreadFunctions(
     }
 }
 
+// Threads 3
+static
+STATUS
+(__cdecl _CmdPrintChildren) (
+    IN      PLIST_ENTRY     ListEntry,
+    IN_OPT  PVOID           FunctionContext
+    )
+{
+    ASSERT(NULL != ListEntry);
+    ASSERT(NULL == FunctionContext);
+
+    PTHREAD pThread = CONTAINING_RECORD(ListEntry, THREAD, ChildrenEntry);
+
+    LOG("|\n");
+    LOG("--> %6x%c", pThread->Id, '|');
+    LOG("%19s%c", pThread->Name, '|');
+    LOG("%4U%c", pThread->Priority, '|');
+    LOG("%7s%c", _CmdThreadStateToName(pThread->State), '|');
+    LOG("%9U%c", pThread->TickCountCompleted, '|');
+    LOG("%9U%c", pThread->TickCountEarly, '|');
+    LOG("%9U%c", pThread->TickCountCompleted + pThread->TickCountEarly, '|');
+    LOG("%9x%c", pThread->Process->Id, '|');
+    LOG("\n");
+
+    return STATUS_SUCCESS;
+}
+
 static
 STATUS
 (__cdecl _CmdThreadPrint) (
@@ -695,7 +738,17 @@ STATUS
     LOG("%9x%c", pThread->Process->Id, '|');
     LOG("\n");
 
-    return STATUS_SUCCESS;
+    // Threads 3
+    INTR_STATE oldState;
+    LockAcquire(&pThread->ChildrenListLock, &oldState);
+    STATUS status = ForEachElementExecute(&pThread->ChildrenThreads,
+        _CmdPrintChildren,
+        NULL,
+        FALSE
+    );
+    LockRelease(&pThread->ChildrenListLock, oldState);
+
+    return status;
 }
 
 static

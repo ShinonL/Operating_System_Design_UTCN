@@ -90,6 +90,22 @@ typedef struct _THREAD
     PVOID                   UserStack;
 
     struct _PROCESS*        Process;
+
+    // Threads 2
+    QWORD                   TimesYielded;
+
+    // Threads 3
+    PTHREAD                ParentThread;
+
+    // Threads 3
+    LOCK                    ChildrenListLock;
+
+    // Threads 3
+    _Guarded_by_(ChildrenListLock)
+    LIST_ENTRY              ChildrenThreads;
+
+    // Threads 3
+    LIST_ENTRY              ChildrenEntry;
 } THREAD, *PTHREAD;
 
 //******************************************************************************
@@ -282,3 +298,9 @@ void
 ThreadSetPriority(
     IN      THREAD_PRIORITY     NewPriority
     );
+
+QWORD GetNoExistingThreads();
+
+QWORD GetNoReadyThreads();
+
+QWORD GetNoBlockedThreads();
