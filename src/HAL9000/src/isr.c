@@ -144,7 +144,7 @@ _IsrExceptionHandler(
     }
 
     // Userprog 3
-    if (!GdtIsSegmentPrivileged(StackPointer->Registers.CS) && !exceptionHandled) {
+    if (!exceptionHandled && !GdtIsSegmentPrivileged((WORD)StackPointer->Registers.CS)) {
         exceptionHandled = TRUE;
         ProcessTerminate(GetCurrentProcess());
     }

@@ -86,6 +86,13 @@ SyscallHandler(
                 (QWORD)pSyscallParameters[2],
                 (QWORD*)pSyscallParameters[3]);
             break;
+        // Userprog 4
+        case SyscallIdMemset:
+            SyscallMemset(
+                (PBYTE)pSyscallParameters[0],
+                (DWORD)pSyscallParameters[1],
+                (BYTE)pSyscallParameters[2]);
+            break;
         default:
             LOG_ERROR("Unimplemented syscall called from User-space!\n");
             status = STATUS_UNSUPPORTED;
@@ -228,7 +235,7 @@ SyscallFileWrite(
         return STATUS_INVALID_PARAMETER1;
     }
 
-    if (!MmuIsBufferValid(Buffer, BytesToWrite, PAGE_RIGHTS_READ, GetCurrentProcess()) || ((char*) Buffer)[BytesToWrite - 1] != 0) {
+    if (!SUCCEEDED(MmuIsBufferValid(Buffer, BytesToWrite, PAGE_RIGHTS_READ, GetCurrentProcess())) || ((char*) Buffer)[BytesToWrite - 1] != 0) {
         return STATUS_INVALID_BUFFER;
     }
 
@@ -238,6 +245,22 @@ SyscallFileWrite(
 
     LOG("%s\n", Buffer);
     *BytesWritten = ((QWORD) strlen((char*) Buffer)) + 1;
+
+    return STATUS_SUCCESS;
+}
+
+// Userprog 4
+STATUS
+SyscallMemset(
+    OUT_WRITES(BytesToWrite)    PBYTE   Address,
+    IN                          DWORD   BytesToWrite,
+    IN                          BYTE    ValueToWrite
+) {
+    if (!SUCCEEDED(MmuIsBufferValid(Address, BytesToWrite, PAGE_RIGHTS_WRITE, GetCurrentProcess()))) {
+        return STATUS_INVALID_BUFFER;
+    }
+
+    memset(Address, ValueToWrite, BytesToWrite);
 
     return STATUS_SUCCESS;
 }

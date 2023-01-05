@@ -196,3 +196,14 @@ SyscallFileWrite(
 {
     return SyscallEntry(SyscallIdFileWrite, FileHandle, Buffer, BytesToWrite, BytesWritten);
 }
+
+// Userprog 4
+STATUS
+SyscallMemset(
+    OUT_WRITES(BytesToWrite)    PBYTE   Address,
+    IN                          DWORD   BytesToWrite,
+    IN                          BYTE    ValueToWrite
+)
+{
+    return SyscallEntry(SyscallIdMemset, Address, BytesToWrite, ValueToWrite);
+}

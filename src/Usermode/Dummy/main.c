@@ -11,5 +11,30 @@ __main(
     UNREFERENCED_PARAMETER(argc);
     UNREFERENCED_PARAMETER(argv);
 
+    // Userprog 4
+    STATUS status;
+    BYTE address;
+
+    __try
+    {
+        status = SyscallMemset(&address, sizeof(BYTE), 7);
+        if (!SUCCEEDED(status))
+        {
+            LOG_FUNC_ERROR("SyscallMemset", status);
+            __leave;
+        }
+
+        status = SyscallMemset((PBYTE)0xFFFF800000000000ULL, 1, 0);
+        if (SUCCEEDED(status))
+        {
+            LOG_FUNC_ERROR("SyscallMemset", status);
+            __leave;
+        }
+    }
+    __finally
+    {
+        
+    }
+
     return STATUS_SUCCESS;
 }
