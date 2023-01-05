@@ -143,6 +143,12 @@ _IsrExceptionHandler(
         LOG_TRACE_EXCEPTION("RSP[0]: 0x%X\n", *((QWORD*)StackPointer->Registers.Rsp));
     }
 
+    // Userprog 3
+    if (!GdtIsSegmentPrivileged(StackPointer->Registers.CS) && !exceptionHandled) {
+        exceptionHandled = TRUE;
+        ProcessTerminate(GetCurrentProcess());
+    }
+
     // no use in logging if we solved the problem
     if (!exceptionHandled)
     {

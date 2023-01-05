@@ -17,6 +17,7 @@ Am reinstalat HAL si un git diff imi vede toate fisierele ca fiind diferite fata
 ## Ex 4
 
 - poate fi gasit prin comentariul "Threads 4"
+- Ne-am uitat impreuna si nu am gasit de ce nu merge
 
 ## Ex 8
 
@@ -27,3 +28,11 @@ Am reinstalat HAL si un git diff imi vede toate fisierele ca fiind diferite fata
 ## Ex 1
 
 - poate fi gasit prin comentariul "Userprog 1"
+
+## Ex 2
+
+- poate fi gasit prin comentariul "Userprog 2"
+
+## Ex 3
+
+- poate fi gasit prin comentariul "Userprog 3"
