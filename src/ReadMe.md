@@ -17,3 +17,13 @@ Am reinstalat HAL si un git diff imi vede toate fisierele ca fiind diferite fata
 ## Ex 4
 
 - poate fi gasit prin comentariul "Threads 4"
+
+## Ex 8
+
+- poate fi gasit prin comentariul "Threads 8"
+
+# Userprog
+
+## Ex 1
+
+- poate fi gasit prin comentariul "Userprog 1"

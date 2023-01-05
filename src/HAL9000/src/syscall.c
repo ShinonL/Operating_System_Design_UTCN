@@ -7,6 +7,8 @@
 #include "mmu.h"
 #include "process_internal.h"
 #include "dmp_cpu.h"
+// Userprog 1
+#include "thread_internal.h"
 
 extern void SyscallEntry();
 
@@ -68,6 +70,14 @@ SyscallHandler(
             status = SyscallValidateInterface((SYSCALL_IF_VERSION)*pSyscallParameters);
             break;
         // STUDENT TODO: implement the rest of the syscalls
+        // Userprog 1
+        case SyscallIdProcessExit:
+            status = SyscallProcessExit((STATUS)pSyscallParameters[0]);
+            break;
+        // Userprog 1
+        case SyscallIdThreadExit:
+            SyscallThreadExit((STATUS)pSyscallParameters[0]);
+            break;
         default:
             LOG_ERROR("Unimplemented syscall called from User-space!\n");
             status = STATUS_UNSUPPORTED;
@@ -152,6 +162,7 @@ SyscallCpuInit(
 }
 
 // SyscallIdIdentifyVersion
+// Userprog 1 - era deja implementat
 STATUS
 SyscallValidateInterface(
     IN  SYSCALL_IF_VERSION          InterfaceVersion
@@ -170,3 +181,26 @@ SyscallValidateInterface(
 }
 
 // STUDENT TODO: implement the rest of the syscalls
+
+// Userprog 1 - same as project and LAB
+STATUS
+SyscallProcessExit(
+    IN      STATUS                  ExitStatus
+) {
+    PPROCESS pProcess = GetCurrentProcess();
+
+    ProcessTerminate(pProcess);
+    pProcess->TerminationStatus = ExitStatus;
+
+    return STATUS_SUCCESS;
+}
+
+// Userprog 1 - same as project and LAB
+STATUS
+SyscallThreadExit(
+    IN  STATUS                      ExitStatus
+) {
+    ThreadExit(ExitStatus);
+
+    return STATUS_SUCCESS;
+}

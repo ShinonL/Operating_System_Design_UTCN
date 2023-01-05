@@ -299,6 +299,7 @@ ThreadSetPriority(
     IN      THREAD_PRIORITY     NewPriority
     );
 
+// Threads 4
 QWORD GetNoExistingThreads();
 
 QWORD GetNoReadyThreads();

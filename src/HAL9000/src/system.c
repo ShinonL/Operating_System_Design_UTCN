@@ -59,6 +59,21 @@ SystemPreinit(
     ProcessSystemPreinit();
 }
 
+
+// Threads 8
+static
+STATUS
+(__cdecl _HelloIpi)(
+    IN_OPT PVOID Context
+ ) {
+    UNREFERENCED_PARAMETER(Context);
+
+    LOGP("Hello there!\n");
+    // while (TRUE); // comentat pt ca nu merge sa testez restul exercitiilor (raman cpu-urile blocate)
+
+    return STATUS_SUCCESS;
+}
+
 STATUS
 SystemInit(
     IN  ASM_PARAMETERS*     Parameters
@@ -312,6 +327,14 @@ SystemInit(
     }
 
     LOGL("Network stack successfully initialized\n");
+
+    // Threads 8
+    SMP_DESTINATION smp_destination = { 0 };
+    status = SmpSendGenericIpiEx(_HelloIpi, NULL, NULL, NULL, TRUE, SmpIpiSendToAllIncludingSelf, smp_destination);
+    if (!SUCCEEDED(status)) {
+        LOG_FUNC_ERROR("SmpSendGenericIpiEx", status);
+        return status;
+    }
 
     return status;
 }
