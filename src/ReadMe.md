@@ -39,6 +39,14 @@ O sa incerc sa termin weekendul acesta restul exercitiilor.
 
 - poate fi gasit prin comentariul "Userprog 3"
 
+## Ex 4
+
+- poate fi gasit prin comentariul "Userprog 4"
+
+## Ex 5
+
+- poate fi gasit prin comentariul "Userprog 5"
+
 # Virtual Memory
 
 ## Ex 1
@@ -53,6 +61,7 @@ O sa incerc sa termin weekendul acesta restul exercitiilor.
 ## Ex 3
 
 - poate fi gasit prin comentariul "VM 3"
+
 ## Ex 4
 
 - poate fi gasit prin comentariul "VM 4"

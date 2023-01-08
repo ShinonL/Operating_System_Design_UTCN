@@ -517,6 +517,23 @@ _ProcessInit(
         // VM 4
         LockInit(&pProcess->FrameMapLock);
 
+        // Userprog 5
+        PPROCESS pParentProcess = GetCurrentProcess();
+        pProcess->ParentProcess = pParentProcess;
+        // Userprog 5
+        InitializeListHead(&pProcess->ChildrenProcessList);
+        // Userprog 5
+        LockInit(&pProcess->ChildrenProcessLock);
+
+        // Userprog 5
+        if (pParentProcess != NULL) {
+            INTR_STATE childLockState;
+            LockAcquire(&pParentProcess->ChildrenProcessLock, &childLockState);
+            InsertTailList(&pParentProcess->ChildrenProcessList, &pProcess->ChildrenEntry);
+            LockRelease(&pParentProcess->ChildrenProcessLock, childLockState);
+        }
+
+
         MutexAcquire(&m_processData.ProcessListLock);
         InsertTailList(&m_processData.ProcessList, &pProcess->NextProcess);
         MutexRelease(&m_processData.ProcessListLock);
@@ -709,6 +726,29 @@ ProcessRemoveThreadFromList(
     }
 }
 
+// Userprog 5
+static
+STATUS
+(__cdecl MoveChildrenProcesses) (
+    IN      PLIST_ENTRY     ListEntry,
+    IN_OPT  PVOID           FunctionContext
+    )
+{
+    ASSERT(FunctionContext == NULL);
+
+    PPROCESS pProcess = CONTAINING_RECORD(ListEntry, PROCESS, ChildrenEntry);
+    PPROCESS pSystemProcess = ProcessRetrieveSystemProcess();
+
+    RemoveEntryList(&pProcess->ChildrenEntry);
+
+    INTR_STATE childLockState;
+    LockAcquire(&pSystemProcess->ChildrenProcessLock, &childLockState);
+    InsertTailList(&pSystemProcess->ChildrenProcessList, &pProcess->ChildrenEntry);
+    LockRelease(&pSystemProcess->ChildrenProcessLock, childLockState);
+
+    return STATUS_SUCCESS;
+}
+
 static
 void
 _ProcessDestroy(
@@ -727,6 +767,12 @@ _ProcessDestroy(
     ASSERT(Process->NumberOfThreads == 0);
 
     LOG_TRACE_PROCESS("Will destroy process with PID 0x%X\n", Process->Id);
+
+    // Userprog 5
+    INTR_STATE childLockState;
+    LockAcquire(&Process->ChildrenProcessLock, &childLockState);
+    ForEachElementExecute(&Process->ChildrenProcessList, MoveChildrenProcesses, NULL, TRUE);
+    LockRelease(&Process->ChildrenProcessLock, childLockState);
 
     // It's ok to use the remove entry list function because when we create the process we call
     // InitializeListHead => the RemoveEntryList has no problem with an empty list as long as it

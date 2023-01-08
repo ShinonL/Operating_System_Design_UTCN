@@ -106,6 +106,15 @@ SyscallHandler(
                 (QWORD)pSyscallParameters[5],
                 (PVOID*)pSyscallParameters[6]);
             break;
+        // Userprog 5
+        case SyscallIdProcessCreate:
+            SyscallProcessCreate(
+                (char*)pSyscallParameters[0],
+                (QWORD)pSyscallParameters[1],
+                (char*)pSyscallParameters[2],
+                (QWORD)pSyscallParameters[3],
+                (UM_HANDLE*)pSyscallParameters[4]);
+            break;
         default:
             LOG_ERROR("Unimplemented syscall called from User-space!\n");
             status = STATUS_UNSUPPORTED;
@@ -305,6 +314,54 @@ SyscallVirtualAlloc(
 
     PPROCESS pProcess = GetCurrentProcess();
     *AllocatedAddress = VmmAllocRegionEx(BaseAddress, Size, AllocType, PageRights, FALSE, NULL, pProcess->VaSpace, pProcess->PagingData, NULL);
+
+    return STATUS_SUCCESS;
+}
+
+// Userprog 5
+STATUS
+SyscallProcessCreate(
+    IN_READS_Z(PathLength)
+    char* ProcessPath,
+    IN          QWORD               PathLength,
+    IN_READS_OPT_Z(ArgLength)
+    char* Arguments,
+    IN          QWORD               ArgLength,
+    OUT         UM_HANDLE* ProcessHandle
+)
+{
+    if (PathLength <= 0) {
+        return STATUS_INVALID_PARAMETER2;
+    }
+
+    if (ProcessPath == NULL || strlen(ProcessPath) != PathLength) {
+        return STATUS_INVALID_PARAMETER1;
+    }
+
+    if (ArgLength < 0) {
+        return STATUS_INVALID_PARAMETER4;
+    }
+
+    if (Arguments == NULL || strlen(Arguments) != ArgLength) {
+        return STATUS_INVALID_PARAMETER3;
+    }
+    
+    char absolutePath[MAX_PATH];
+    if (ProcessPath == strrchr(ProcessPath, '\\')) {
+        sprintf(absolutePath, "C:\\Applications\\%s", ProcessPath);
+    } else {
+        strcpy(absolutePath, ProcessPath);
+    }
+
+    PPROCESS pProcess;
+    STATUS status = ProcessCreate(absolutePath, Arguments, &pProcess);
+
+    if (!SUCCEEDED(status)) {
+        *ProcessHandle = UM_INVALID_HANDLE_VALUE;
+        return STATUS_UNSUCCESSFUL;
+    }
+
+    *ProcessHandle = pProcess->Id;
 
     return STATUS_SUCCESS;
 }

@@ -853,8 +853,8 @@ VmmSolvePageFault(
     ASSERT(PagingData != NULL);
 
     // VM 1
-    LOG("Faulting Address: 0x%X\n", FaultingAddress);
-    LOG("Requested Rights: %X\n", RightsRequested);
+    // LOG("Faulting Address: 0x%X\n", FaultingAddress);
+    // LOG("Requested Rights: %X\n", RightsRequested);
 
     // we will certainly not use the first virtual page of memory
     if (NULL == (PVOID) AlignAddressLower(FaultingAddress, PAGE_SIZE))
@@ -868,7 +868,7 @@ VmmSolvePageFault(
     {
         LOG_TRACE_VMM("User code should not access KM pages!\n");
         // VM 1
-        LOG("Faulting Process Name: %s\n", GetCurrentProcess()->ProcessName);
+        // LOG("Faulting Process Name: %s\n", GetCurrentProcess()->ProcessName);
         return FALSE;
     }
     else if (!bKernelAddress && PagingData->Data.KernelSpace)

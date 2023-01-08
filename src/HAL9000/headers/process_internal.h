@@ -67,6 +67,19 @@ typedef struct _PROCESS
     // VM 4
     _Guarded_by_(FrameMapLock)
         LIST_ENTRY                      FrameMappingsHead;
+
+    // Userprog 5
+    struct _PROCESS*                ParentProcess;
+
+    // Userprog 5
+    LOCK                            ChildrenProcessLock;
+
+    // Userprog 5
+    _Guarded_by_(ChildrenProcessLock)
+        LIST_ENTRY                  ChildrenProcessList;
+
+    // Userprog 5
+    LIST_ENTRY                      ChildrenEntry;
 } PROCESS, *PPROCESS;
 
 //******************************************************************************
