@@ -5,6 +5,8 @@
 #include "process.h"
 #include "synch.h"
 #include "ex_event.h"
+// VM 4
+#include "thread_internal.h"
 
 #define PROCESS_MAX_PHYSICAL_FRAMES     16
 #define PROCESS_MAX_OPEN_FILES          16
@@ -58,6 +60,13 @@ typedef struct _PROCESS
 
     // VaSpace used only for UM virtual memory allocations
     struct _VMM_RESERVATION_SPACE*  VaSpace;
+
+    // VM 4
+    LOCK                            FrameMapLock;
+
+    // VM 4
+    _Guarded_by_(FrameMapLock)
+        LIST_ENTRY                      FrameMappingsHead;
 } PROCESS, *PPROCESS;
 
 //******************************************************************************

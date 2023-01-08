@@ -2,6 +2,8 @@
 
 #include "mem_structures.h"
 #include "vmm.h"
+// VM 4
+#include "process_internal.h"
 
 typedef struct _FILE_OBJECT *PFILE_OBJECT;
 
@@ -27,6 +29,9 @@ typedef struct _VMM_RESERVATION_SPACE
 
     _Guarded_by_(ReservationLock)
     struct _VMM_RESERVATION*    ReservationList;
+
+    // VM 4
+    PPROCESS             ProcessRef;
 } VMM_RESERVATION_SPACE, *PVMM_RESERVATION_SPACE;
 
 //******************************************************************************

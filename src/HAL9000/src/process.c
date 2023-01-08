@@ -512,6 +512,11 @@ _ProcessInit(
         // list management)
         pProcess->Id = _ProcessSystemRetrieveNextPid();
 
+        // VM 4
+        InitializeListHead(&pProcess->FrameMappingsHead);
+        // VM 4
+        LockInit(&pProcess->FrameMapLock);
+
         MutexAcquire(&m_processData.ProcessListLock);
         InsertTailList(&m_processData.ProcessList, &pProcess->NextProcess);
         MutexRelease(&m_processData.ProcessListLock);

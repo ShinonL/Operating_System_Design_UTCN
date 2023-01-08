@@ -24,6 +24,24 @@ typedef struct _VMM_DATA
     BYTE                    UncacheableIndex;
 } VMM_DATA, *PVMM_DATA;
 
+// VM 4
+typedef struct _FRAME_MAPPING
+{
+    PHYSICAL_ADDRESS    PhysicalAddress;
+    PVOID               VirtualAddress;
+
+    QWORD               AccessCount;
+
+    LIST_ENTRY          FrameListEntry;
+} FRAME_MAPPING, * PFRAME_MAPPING;
+
+// VM 4
+typedef struct _FRAME_MAP_CTX
+{
+    QWORD         BaseAddress;
+    QWORD         EndAddress;
+} FRAME_MAP_CTX, *PFRAME_MAP_CTX;
+
 typedef
 BOOLEAN
 (__cdecl FUNC_PageWalkCallback)(
@@ -96,6 +114,43 @@ _VmWalkPagingTables(
 static FUNC_PageWalkCallback            _VmMapPage;
 static FUNC_PageWalkCallback            _VmUnmapPage;
 static FUNC_PageWalkCallback            _VmRetrievePhyAccess;
+
+// VM 4
+static
+void
+_VmmAddFrameMappings(
+    IN          PHYSICAL_ADDRESS    PhysicalAddress,
+    IN          PVOID               VirtualAddress,
+    IN          DWORD               FrameCount
+)
+{
+    PPROCESS pProcess;
+    PFRAME_MAPPING pMapping;
+    INTR_STATE intrState;
+
+    pProcess = GetCurrentProcess();
+
+    if (ProcessIsSystem(pProcess))
+    {
+        return;
+    }
+
+    for (DWORD i = 0; i < FrameCount; ++i)
+    {
+        pMapping = ExAllocatePoolWithTag(PoolAllocatePanicIfFail, sizeof(FRAME_MAPPING), HEAP_MMU_TAG, 0);
+
+        pMapping->PhysicalAddress = PtrOffset(PhysicalAddress, i * PAGE_SIZE);
+        pMapping->VirtualAddress = PtrOffset(VirtualAddress, i * PAGE_SIZE);
+        pMapping->AccessCount = 1;
+
+        LockAcquire(&pProcess->FrameMapLock, &intrState);
+        InsertTailList(&pProcess->FrameMappingsHead, &pMapping->FrameListEntry);
+        LockRelease(&pProcess->FrameMapLock, intrState);
+
+        LOG("Allocated entry from 0x%X -> 0x%X\n",
+            pMapping->VirtualAddress, pMapping->PhysicalAddress);
+    }
+}
 
 __forceinline
 static
@@ -609,6 +664,12 @@ VmmAllocRegionEx(
                                      PagingData
                 );
 
+                // VM 4
+                if (PagingData != NULL && !PagingData->Data.KernelSpace)
+                {
+                    _VmmAddFrameMappings(pa, pBaseAddress, noOfFrames);
+                }
+
                 // Check if the mapping is backed up by a file
                 if (FileObject != NULL)
                 {
@@ -683,6 +744,30 @@ VmmAllocRegionEx(
     return pBaseAddress;
 }
 
+// VM 4
+static
+STATUS
+(__cdecl FreeFrameMappings) (
+    IN      PLIST_ENTRY     ListEntry,
+    IN_OPT  PVOID           FunctionContext
+    )
+{
+    ASSERT(FunctionContext != NULL);
+
+    PFRAME_MAP_CTX pCtx = (PFRAME_MAP_CTX)FunctionContext;
+
+    PFRAME_MAPPING frameMapping = CONTAINING_RECORD(ListEntry, FRAME_MAPPING, FrameListEntry);
+
+    if ((QWORD)frameMapping->VirtualAddress >= pCtx->BaseAddress && (QWORD)frameMapping->VirtualAddress <= pCtx->EndAddress) {
+        LOG("Freed Frame Mapping -> PA: 0x%X   VA: 0x%X   AccesCount: %U", frameMapping->PhysicalAddress, frameMapping->VirtualAddress, frameMapping->AccessCount);
+
+        RemoveEntryList(ListEntry);
+        ExFreePoolWithTag(frameMapping, HEAP_MMU_TAG);
+    }
+
+    return STATUS_SUCCESS;
+}
+
 void
 VmmFreeRegionEx(
     IN      PVOID                   Address,
@@ -727,6 +812,23 @@ VmmFreeRegionEx(
                          Release,
                          PagingData);
     }
+
+    // VM 4
+    PPROCESS pProcess = (VaSpace != NULL) ? VaSpace->ProcessRef : m_vmmData.VmmReservationSpace.ProcessRef;
+    if (pProcess == NULL || ProcessIsSystem(pProcess)) {
+        return;
+    }
+
+    // VM 4
+    FRAME_MAP_CTX frameMapCtx = { 0 };
+    frameMapCtx.BaseAddress = (QWORD)Address;
+    frameMapCtx.EndAddress = (QWORD)Address + (alignedSize / PAGE_SIZE - 1) * (QWORD)PAGE_SIZE;
+
+    // VM 4
+    INTR_STATE dummyState;
+    LockAcquire(&pProcess->FrameMapLock, &dummyState);
+    ForEachElementExecute(&pProcess->FrameMappingsHead, FreeFrameMappings, &frameMapCtx, TRUE);
+    LockRelease(&pProcess->FrameMapLock, dummyState);
 }
 
 BOOLEAN
@@ -750,6 +852,10 @@ VmmSolvePageFault(
     ASSERT(INTR_OFF == CpuIntrGetState());
     ASSERT(PagingData != NULL);
 
+    // VM 1
+    LOG("Faulting Address: 0x%X\n", FaultingAddress);
+    LOG("Requested Rights: %X\n", RightsRequested);
+
     // we will certainly not use the first virtual page of memory
     if (NULL == (PVOID) AlignAddressLower(FaultingAddress, PAGE_SIZE))
     {
@@ -761,6 +867,8 @@ VmmSolvePageFault(
     if (bKernelAddress && !PagingData->Data.KernelSpace)
     {
         LOG_TRACE_VMM("User code should not access KM pages!\n");
+        // VM 1
+        LOG("Faulting Process Name: %s\n", GetCurrentProcess()->ProcessName);
         return FALSE;
     }
     else if (!bKernelAddress && PagingData->Data.KernelSpace)
@@ -813,6 +921,12 @@ VmmSolvePageFault(
                                  uncacheable,
                                  PagingData
                                  );
+
+            // VM 4
+            if (!PagingData->Data.KernelSpace)
+            {
+                _VmmAddFrameMappings(pa, alignedAddress, 1);
+            }
 
             // 3. If the virtual address is backed by a file read its contents
             if (pBackingFile != NULL)

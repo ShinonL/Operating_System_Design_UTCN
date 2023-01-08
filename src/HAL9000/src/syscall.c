@@ -9,6 +9,8 @@
 #include "dmp_cpu.h"
 // Userprog 1
 #include "thread_internal.h"
+// VM 3
+#include "vmm.h"
 
 extern void SyscallEntry();
 
@@ -92,6 +94,17 @@ SyscallHandler(
                 (PBYTE)pSyscallParameters[0],
                 (DWORD)pSyscallParameters[1],
                 (BYTE)pSyscallParameters[2]);
+            break;
+        // VM 3
+        case SyscallIdVirtualAlloc:
+            SyscallVirtualAlloc(
+                (PVOID)pSyscallParameters[0],
+                (QWORD)pSyscallParameters[1],
+                (VMM_ALLOC_TYPE)pSyscallParameters[2],
+                (PAGE_RIGHTS)pSyscallParameters[3],
+                (UM_HANDLE)pSyscallParameters[4],
+                (QWORD)pSyscallParameters[5],
+                (PVOID*)pSyscallParameters[6]);
             break;
         default:
             LOG_ERROR("Unimplemented syscall called from User-space!\n");
@@ -261,6 +274,37 @@ SyscallMemset(
     }
 
     memset(Address, ValueToWrite, BytesToWrite);
+
+    return STATUS_SUCCESS;
+}
+
+// VM 3
+STATUS
+SyscallVirtualAlloc(
+    IN_OPT      PVOID                   BaseAddress,
+    IN          QWORD                   Size,
+    IN          VMM_ALLOC_TYPE          AllocType,
+    IN          PAGE_RIGHTS             PageRights,
+    IN_OPT      UM_HANDLE               FileHandle,
+    IN_OPT      QWORD                   Key,
+    OUT         PVOID* AllocatedAddress
+) {
+    UNREFERENCED_PARAMETER(Key);
+
+    if (Size < 0) {
+        return STATUS_INVALID_PARAMETER2;
+    }
+
+    if (!SUCCEEDED(MmuIsBufferValid(BaseAddress, Size, PageRights, GetCurrentProcess()))) {
+        return STATUS_INVALID_PARAMETER1;
+    }
+
+    if (FileHandle == UM_INVALID_HANDLE_VALUE) {
+        return STATUS_INVALID_PARAMETER5;
+    }
+
+    PPROCESS pProcess = GetCurrentProcess();
+    *AllocatedAddress = VmmAllocRegionEx(BaseAddress, Size, AllocType, PageRights, FALSE, NULL, pProcess->VaSpace, pProcess->PagingData, NULL);
 
     return STATUS_SUCCESS;
 }

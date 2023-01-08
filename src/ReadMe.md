@@ -1,5 +1,7 @@
 Am reinstalat HAL si un git diff imi vede toate fisierele ca fiind diferite fata de ce e pe bracnh asa ca voi scrie aici modificarile facute
 
+O sa incerc sa termin weekendul acesta restul exercitiilor.
+
 # Threads
 
 ## Ex 1
@@ -36,3 +38,21 @@ Am reinstalat HAL si un git diff imi vede toate fisierele ca fiind diferite fata
 ## Ex 3
 
 - poate fi gasit prin comentariul "Userprog 3"
+
+# Virtual Memory
+
+## Ex 1
+
+- poate fi gasit prin comentariul "VM 1"
+
+## Ex 2
+
+- poate fi gasit prin comentariul "VM 2"
+- am reparat logul
+
+## Ex 3
+
+- poate fi gasit prin comentariul "VM 3"
+## Ex 4
+
+- poate fi gasit prin comentariul "VM 4"

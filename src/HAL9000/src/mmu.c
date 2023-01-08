@@ -15,6 +15,8 @@
 #include "thread_internal.h"
 #include "io.h"
 #include "mdl.h"
+// VM 4
+#include "vm_reservation_space.h"
 
 #define PAGING_STRUCTURES_BASE_MEMORY                           (128*KB_SIZE)
 
@@ -934,6 +936,9 @@ MmuCreateAddressSpaceForProcess(
             LOG_FUNC_ERROR("VmmCreateVirtualAddressSpace", status);
             __leave;
         }
+
+        // VM 4
+        Process->VaSpace->ProcessRef = Process;
 
         LOG_TRACE_MMU("Successfully initialized VA space for process [%s]\n", ProcessGetName(Process));
     }
