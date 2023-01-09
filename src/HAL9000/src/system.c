@@ -21,6 +21,8 @@
 #include "ex_system.h"
 #include "process_internal.h"
 #include "boot_module.h"
+// Userprog 7
+#include "syscall.h"
 
 #define NO_OF_TSS_STACKS             7
 STATIC_ASSERT(NO_OF_TSS_STACKS <= NO_OF_IST);
@@ -335,6 +337,9 @@ SystemInit(
         LOG_FUNC_ERROR("SmpSendGenericIpiEx", status);
         return status;
     }
+
+    // Userprog 7
+    status = SyscallInitSystem();
 
     return status;
 }

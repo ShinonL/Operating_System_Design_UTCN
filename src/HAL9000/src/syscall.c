@@ -11,10 +11,35 @@
 #include "thread_internal.h"
 // VM 3
 #include "vmm.h"
+// Userprog 8
+#include "mutex.h"
 
 extern void SyscallEntry();
 
 #define SYSCALL_IF_VERSION_KM       SYSCALL_IMPLEMENTED_IF_VERSION
+
+// Userprog 7
+typedef struct _GLOBAL_DATA {
+    char*   VarName;
+    QWORD   Value;
+
+    LIST_ENTRY VarEntry;
+} GLOBAL_DATA, *PGLOBAL_DATA;
+
+// Userprog 6
+typedef struct _SYSCALL_DATA {
+    _Guarded_by_(DisabledLock)
+        BOOLEAN     IsSyscallDisabled;
+    LOCK            DisabledLock;
+
+    // Userprog 7
+    _Guarded_by_(GlobalVariablesLock)
+        LIST_ENTRY  GlobalVariablesList;
+
+    LOCK            GlobalVariablesLock;
+} SYSCALL_DATA, *PSYSCALL_DATA;
+
+SYSCALL_DATA m_syscalldata;
 
 void
 SyscallHandler(
@@ -66,6 +91,10 @@ SyscallHandler(
         pSyscallParameters = (PQWORD)usermodeProcessorState->RegisterValues[RegisterRbp] + 1;
 
         // Dispatch syscalls
+        // Userprog 6
+        status = STATUS_UNSUCCESSFUL;
+        INTR_STATE dummyState;
+        LockAcquire(&m_syscalldata.DisabledLock, &dummyState);
         switch (sysCallId)
         {
         case SyscallIdIdentifyVersion:
@@ -74,52 +103,113 @@ SyscallHandler(
         // STUDENT TODO: implement the rest of the syscalls
         // Userprog 1
         case SyscallIdProcessExit:
-            status = SyscallProcessExit((STATUS)pSyscallParameters[0]);
+            // Userprog 6
+            if (!m_syscalldata.IsSyscallDisabled)
+                status = SyscallProcessExit((STATUS)pSyscallParameters[0]);
+            else LOG("Syscalls are disabled.\n");
             break;
         // Userprog 1
         case SyscallIdThreadExit:
-            SyscallThreadExit((STATUS)pSyscallParameters[0]);
+            // Userprog 6
+            if (!m_syscalldata.IsSyscallDisabled)
+                status = SyscallThreadExit((STATUS)pSyscallParameters[0]);
+            else LOG("Syscalls are disabled.\n");
             break;
         // Userprog 2
         case SyscallIdFileWrite:
-            SyscallFileWrite(
-                (UM_HANDLE)pSyscallParameters[0],
-                (PVOID)pSyscallParameters[1],
-                (QWORD)pSyscallParameters[2],
-                (QWORD*)pSyscallParameters[3]);
+            status = SyscallFileWrite(
+                    (UM_HANDLE)pSyscallParameters[0],
+                    (PVOID)pSyscallParameters[1],
+                    (QWORD)pSyscallParameters[2],
+                    (QWORD*)pSyscallParameters[3]);
             break;
         // Userprog 4
         case SyscallIdMemset:
-            SyscallMemset(
-                (PBYTE)pSyscallParameters[0],
-                (DWORD)pSyscallParameters[1],
-                (BYTE)pSyscallParameters[2]);
+            // Userprog 6
+            if (!m_syscalldata.IsSyscallDisabled)
+                status = SyscallMemset(
+                    (PBYTE)pSyscallParameters[0],
+                    (DWORD)pSyscallParameters[1],
+                    (BYTE)pSyscallParameters[2]);
+            else LOG("Syscalls are disabled.\n");
             break;
         // VM 3
         case SyscallIdVirtualAlloc:
-            SyscallVirtualAlloc(
-                (PVOID)pSyscallParameters[0],
-                (QWORD)pSyscallParameters[1],
-                (VMM_ALLOC_TYPE)pSyscallParameters[2],
-                (PAGE_RIGHTS)pSyscallParameters[3],
-                (UM_HANDLE)pSyscallParameters[4],
-                (QWORD)pSyscallParameters[5],
-                (PVOID*)pSyscallParameters[6]);
+            // Userprog 6
+            if (!m_syscalldata.IsSyscallDisabled)
+                status = SyscallVirtualAlloc(
+                    (PVOID)pSyscallParameters[0],
+                    (QWORD)pSyscallParameters[1],
+                    (VMM_ALLOC_TYPE)pSyscallParameters[2],
+                    (PAGE_RIGHTS)pSyscallParameters[3],
+                    (UM_HANDLE)pSyscallParameters[4],
+                    (QWORD)pSyscallParameters[5],
+                    (PVOID*)pSyscallParameters[6]);
+            else LOG("Syscalls are disabled.\n");
             break;
         // Userprog 5
         case SyscallIdProcessCreate:
-            SyscallProcessCreate(
-                (char*)pSyscallParameters[0],
-                (QWORD)pSyscallParameters[1],
-                (char*)pSyscallParameters[2],
-                (QWORD)pSyscallParameters[3],
-                (UM_HANDLE*)pSyscallParameters[4]);
+            // Userprog 6
+            if (!m_syscalldata.IsSyscallDisabled)
+                status = SyscallProcessCreate(
+                    (char*)pSyscallParameters[0],
+                    (QWORD)pSyscallParameters[1],
+                    (char*)pSyscallParameters[2],
+                    (QWORD)pSyscallParameters[3],
+                    (UM_HANDLE*)pSyscallParameters[4]);
+            else LOG("Syscalls are disabled.\n");
+            break;
+        // Userprog 6
+        case SyscallIdDisableSyscalls:
+            status = SyscallDisableSyscalls((BOOLEAN)pSyscallParameters[0]);
+            break;
+        // Userprog 7
+        case SyscallIdSetGlobalVariable:
+            if (!m_syscalldata.IsSyscallDisabled)
+                status = SyscallSetGlobalVariable(
+                    (char*)pSyscallParameters[0],
+                    (DWORD)pSyscallParameters[1],
+                    (QWORD)pSyscallParameters[2]);
+            else LOG("Syscalls are disabled.\n");
+            break;
+        // Userprog 7
+        case SyscallIdGetGlobalVariable:
+            if (!m_syscalldata.IsSyscallDisabled)
+                status = SyscallGetGlobalVariable(
+                    (char*)pSyscallParameters[0],
+                    (DWORD)pSyscallParameters[1],
+                    (PQWORD)pSyscallParameters[2]);
+            else LOG("Syscalls are disabled.\n");
+            break;
+        // Userprog 8
+        case SyscallIdMutexInit:
+            if (!m_syscalldata.IsSyscallDisabled)
+                status = SyscallMutexInit(
+                    (UM_HANDLE*)pSyscallParameters[0]);
+            else LOG("Syscalls are disabled.\n");
+            break;
+        // Userprog 8
+        case SyscallIdMutexAcquire:
+            if (!m_syscalldata.IsSyscallDisabled)
+                status = SyscallMutexAcquire(
+                    (UM_HANDLE)pSyscallParameters[0]);
+            else LOG("Syscalls are disabled.\n");
+            break;
+        // Userprog 8
+        case SyscallIdMutexRelease:
+            if (!m_syscalldata.IsSyscallDisabled)
+                status = SyscallMutexRelease(
+                    (UM_HANDLE)pSyscallParameters[0]);
+            else LOG("Syscalls are disabled.\n");
             break;
         default:
             LOG_ERROR("Unimplemented syscall called from User-space!\n");
             status = STATUS_UNSUPPORTED;
             break;
         }
+
+        // Userprog 6
+        LockRelease(&m_syscalldata.DisabledLock, dummyState);
 
     }
     __finally
@@ -145,6 +235,17 @@ SyscallInitSystem(
     void
     )
 {
+    // Userprog 6
+    memzero(&m_syscalldata, sizeof(SYSCALL_DATA));
+    m_syscalldata.IsSyscallDisabled = FALSE;
+
+    // Userprog 6
+    LockInit(&m_syscalldata.DisabledLock);
+
+    // Userprog 7
+    LockInit(&m_syscalldata.GlobalVariablesLock);
+    InitializeListHead(&m_syscalldata.GlobalVariablesList);
+
     return STATUS_SUCCESS;
 }
 
@@ -261,8 +362,12 @@ SyscallFileWrite(
         return STATUS_INVALID_BUFFER;
     }
 
-    if (strlen((char*) Buffer) != BytesToWrite || BytesToWrite < 0) {
+    if (strlen((char*)Buffer) != BytesToWrite - 1 ||BytesToWrite < 0) {
         return STATUS_INVALID_PARAMETER3;
+    }
+
+    if (!SUCCEEDED(MmuIsBufferValid(BytesWritten, sizeof(QWORD), PAGE_RIGHTS_WRITE, GetCurrentProcess()))) {
+        return STATUS_INVALID_PARAMETER4;
     }
 
     LOG("%s\n", Buffer);
@@ -312,6 +417,10 @@ SyscallVirtualAlloc(
         return STATUS_INVALID_PARAMETER5;
     }
 
+    if (!SUCCEEDED(MmuIsBufferValid(AllocatedAddress, sizeof(PVOID), PAGE_RIGHTS_WRITE, GetCurrentProcess()))) {
+        return STATUS_INVALID_BUFFER;
+    }
+
     PPROCESS pProcess = GetCurrentProcess();
     *AllocatedAddress = VmmAllocRegionEx(BaseAddress, Size, AllocType, PageRights, FALSE, NULL, pProcess->VaSpace, pProcess->PagingData, NULL);
 
@@ -334,7 +443,9 @@ SyscallProcessCreate(
         return STATUS_INVALID_PARAMETER2;
     }
 
-    if (ProcessPath == NULL || strlen(ProcessPath) != PathLength) {
+    if (!SUCCEEDED(MmuIsBufferValid(ProcessPath, PathLength, PAGE_RIGHTS_READ, GetCurrentProcess())) 
+        || ProcessPath[PathLength - 1] != 0 
+        || strlen(ProcessPath) != PathLength - 1) {
         return STATUS_INVALID_PARAMETER1;
     }
 
@@ -342,8 +453,19 @@ SyscallProcessCreate(
         return STATUS_INVALID_PARAMETER4;
     }
 
-    if (Arguments == NULL || strlen(Arguments) != ArgLength) {
+    if (Arguments == NULL) {
+        if (ArgLength != 0) {
+            return STATUS_INVALID_PARAMETER3;
+        }
+    } else if (!SUCCEEDED(MmuIsBufferValid(Arguments, ArgLength, PAGE_RIGHTS_READ, GetCurrentProcess()))
+        || Arguments[ArgLength - 1] != 0
+        || strlen(Arguments) != ArgLength - 1) {
+
         return STATUS_INVALID_PARAMETER3;
+    }
+
+    if (!SUCCEEDED(MmuIsBufferValid(ProcessHandle, sizeof(UM_HANDLE), PAGE_RIGHTS_WRITE, GetCurrentProcess()))) {
+        return STATUS_INVALID_PARAMETER5;
     }
     
     char absolutePath[MAX_PATH];
@@ -362,6 +484,176 @@ SyscallProcessCreate(
     }
 
     *ProcessHandle = pProcess->Id;
+
+    return STATUS_SUCCESS;
+}
+
+// Userprog 6
+STATUS
+SyscallDisableSyscalls(
+    IN BOOLEAN      Disabled
+) {
+    m_syscalldata.IsSyscallDisabled = Disabled;
+
+    return STATUS_SUCCESS;
+}
+
+// Userprog 7
+STATUS
+SyscallSetGlobalVariable(
+    IN_READS_Z(VarLength)           char* VariableName,
+    IN                              DWORD   VarLength,
+    IN                              QWORD   Value
+) {
+    LOG("set\n");
+    if (VarLength <= 0) {
+        return STATUS_INVALID_PARAMETER2;
+    }
+
+    LOG("set 1\n");
+    if (!SUCCEEDED(MmuIsBufferValid(VariableName, VarLength, PAGE_RIGHTS_READ, GetCurrentProcess())) 
+        || VariableName[VarLength - 1] != 0 
+        || strlen(VariableName) != VarLength - 1) {
+        return STATUS_INVALID_PARAMETER1;
+    }
+
+    LOG("set validate\n");
+    INTR_STATE dummyState;
+    LockAcquire(&m_syscalldata.GlobalVariablesLock, &dummyState);
+
+    LIST_ITERATOR it;
+    ListIteratorInit(&m_syscalldata.GlobalVariablesList, &it);
+
+    LOG("set before while\n");
+    PLIST_ENTRY pEntry = ListIteratorNext(&it);
+    DWORD i = 0;
+    while (pEntry != NULL) {
+        LOGL("set in whilt %d\n", i++);
+        PGLOBAL_DATA pGlobalData = CONTAINING_RECORD(pEntry, GLOBAL_DATA, VarEntry);
+
+        if (strncmp(pGlobalData->VarName, VariableName, VarLength) == 0) {
+            LOG("set found\n");
+            pGlobalData->Value = Value;
+            LockRelease(&m_syscalldata.GlobalVariablesLock, dummyState);
+
+            return STATUS_SUCCESS;
+        }
+        pEntry = ListIteratorNext(&it);
+    }
+    LockRelease(&m_syscalldata.GlobalVariablesLock, dummyState);
+
+    GLOBAL_DATA globalData; 
+    memzero(&globalData, sizeof(GLOBAL_DATA));
+
+    LOG("set new\n");
+    globalData.Value = Value;
+
+    globalData.VarName = ExAllocatePoolWithTag(PoolAllocateZeroMemory, VarLength, HEAP_TEST_TAG, 0);
+    sprintf(globalData.VarName, "%s", VariableName);
+    LOG("global %s\n", globalData.VarName);
+    LOG("param set %s\n", VariableName);
+
+    INTR_STATE dummy;
+    LockAcquire(&m_syscalldata.GlobalVariablesLock, &dummy);
+    InsertTailList(&m_syscalldata.GlobalVariablesList, &globalData.VarEntry);
+    LockRelease(&m_syscalldata.GlobalVariablesLock, dummy);
+
+    return STATUS_SUCCESS;
+}
+
+// Userprog 7
+STATUS
+SyscallGetGlobalVariable(
+    IN_READS_Z(VarLength)           char* VariableName,
+    IN                              DWORD   VarLength,
+    OUT                             PQWORD  Value
+) {
+    LOG("get\n");
+    if (VarLength <= 0) {
+        return STATUS_INVALID_PARAMETER2;
+    }
+
+    LOG("get 1\n");
+    if (!SUCCEEDED(MmuIsBufferValid(VariableName, VarLength, PAGE_RIGHTS_READ, GetCurrentProcess())) 
+        || VariableName[VarLength - 1] != 0 
+        || strlen(VariableName) != VarLength - 1) {
+        return STATUS_INVALID_PARAMETER1;
+    }
+
+    LOG("get 2\n");
+    if (!SUCCEEDED(MmuIsBufferValid((PVOID)Value, sizeof(QWORD), PAGE_RIGHTS_WRITE, GetCurrentProcess()))) {
+        return STATUS_INVALID_PARAMETER3;
+    }
+
+    LOG("get VALIDATES\n");
+    INTR_STATE dummyState;
+    LockAcquire(&m_syscalldata.GlobalVariablesLock, &dummyState);
+
+    LIST_ITERATOR it;
+    ListIteratorInit(&m_syscalldata.GlobalVariablesList, &it);
+
+    PLIST_ENTRY pEntry;
+    LOG("get BEFORE while\n");
+    while ((pEntry = ListIteratorNext(&it)) != NULL) {
+        PGLOBAL_DATA pGlobalData = CONTAINING_RECORD(pEntry, GLOBAL_DATA, VarEntry);
+        LOGL("IN WHILE\n");
+        LOG("paramt %s\n", VariableName);
+        LOG("global %s\n", pGlobalData->VarName);
+        
+        if (strncmp(pGlobalData->VarName, VariableName, VarLength) == 0) {
+            LOG("found\n");
+            *Value = pGlobalData->Value;
+            LockRelease(&m_syscalldata.GlobalVariablesLock, dummyState);
+
+            return STATUS_SUCCESS;
+        }
+    }
+    LockRelease(&m_syscalldata.GlobalVariablesLock, dummyState);
+
+    LOG("not found\n");
+    *Value = 0;
+
+    return STATUS_UNSUCCESSFUL;
+}
+
+// Userprog 8
+STATUS
+SyscallMutexInit(
+    OUT         UM_HANDLE* Mutex
+) {
+    if (!SUCCEEDED(MmuIsBufferValid((PVOID)Mutex, sizeof(MUTEX), PAGE_RIGHTS_READWRITE, GetCurrentProcess()))) {
+        return STATUS_INVALID_PARAMETER1;
+    }
+
+    MutexInit((PMUTEX)Mutex, FALSE);
+
+    return (Mutex == NULL) ? STATUS_UNSUCCESSFUL : STATUS_SUCCESS;
+}
+
+// Userprog 8
+STATUS
+SyscallMutexAcquire(
+    IN       UM_HANDLE          Mutex
+) {
+    if (!SUCCEEDED(MmuIsBufferValid((PVOID)Mutex, sizeof(MUTEX), PAGE_RIGHTS_READWRITE, GetCurrentProcess()))) {
+        return STATUS_INVALID_PARAMETER1;
+    }
+
+    MutexAcquire((PMUTEX)Mutex);
+
+    return STATUS_SUCCESS;
+}
+
+// Userprog 8
+STATUS
+SyscallMutexRelease(
+    IN       UM_HANDLE          Mutex
+) {
+    if (!SUCCEEDED(MmuIsBufferValid((PVOID)Mutex, sizeof(MUTEX), PAGE_RIGHTS_READWRITE, GetCurrentProcess()))) {
+        return STATUS_INVALID_PARAMETER1;
+    }
+
+    MutexRelease((PMUTEX)Mutex);
 
     return STATUS_SUCCESS;
 }

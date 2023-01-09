@@ -1,6 +1,8 @@
 #include "common_lib.h"
 #include "syscall_if.h"
 #include "um_lib_helper.h"
+// Userprog 8
+#include "../../../HAL9000/headers/mutex.h"
 
 static
 STATUS
@@ -19,40 +21,40 @@ __main(
     char**      argv
 )
 {
-    UM_HANDLE hThread;
-    STATUS status;
-
     UNREFERENCED_PARAMETER(argc);
     UNREFERENCED_PARAMETER(argv);
 
-    hThread = UM_INVALID_HANDLE_VALUE;
+    // Userprog 8
+    MUTEX mutex;
+    STATUS status;
 
     __try
     {
-        status = UmThreadCreate(_ThreadFunc, NULL, &hThread);
-        if (!SUCCEEDED(status))
+        status = SyscallMutexInit((UM_HANDLE*)&mutex);
+
+        if (!SUCCEEDED(status)) 
         {
-            LOG_FUNC_ERROR("UmThreadCreate", status);
+            LOG_FUNC_ERROR("SyscallMutexInit", status);
             __leave;
         }
 
-        status = SyscallThreadCloseHandle(hThread);
-        if (!SUCCEEDED(status))
+        status = SyscallMutexAcquire((UM_HANDLE)&mutex);
+        if (!SUCCEEDED(status)) 
         {
-            LOG_FUNC_ERROR("SyscallThreadCloseHandle", status);
+            LOG_FUNC_ERROR("SyscallMutexInit", status);
             __leave;
         }
 
-        status = SyscallThreadCloseHandle(hThread);
-        if (SUCCEEDED(status))
+        status = SyscallMutexRelease((UM_HANDLE)&mutex);
+        if (!SUCCEEDED(status)) 
         {
-            LOG_ERROR("SyscallThreadCloseHandle succeeded even if the 0x%X handle was already closed!\n", hThread);
+            LOG_FUNC_ERROR("SyscallMutexInit", status);
             __leave;
         }
     }
     __finally
     {
-
+        LOGL("Finished testing SyscallMutexInit SyscallMutexAcquire SyscallMutexRelease\n");
     }
 
     return STATUS_SUCCESS;

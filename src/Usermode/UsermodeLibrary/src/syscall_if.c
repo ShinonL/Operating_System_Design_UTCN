@@ -207,3 +207,55 @@ SyscallMemset(
 {
     return SyscallEntry(SyscallIdMemset, Address, BytesToWrite, ValueToWrite);
 }
+
+// Userprog 6
+STATUS
+SyscallDisableSyscalls(
+    IN BOOLEAN      Disabled
+) {
+    return SyscallEntry(SyscallIdDisableSyscalls, Disabled);
+}
+
+// Userprog 7
+STATUS
+SyscallSetGlobalVariable(
+    IN_READS_Z(VarLength)           char* VariableName,
+    IN                              DWORD   VarLength,
+    IN                              QWORD   Value
+) {
+    return SyscallEntry(SyscallIdSetGlobalVariable, VariableName, VarLength, Value);
+}
+
+// Userprog 7
+STATUS
+SyscallGetGlobalVariable(
+    IN_READS_Z(VarLength)           char* VariableName,
+    IN                              DWORD   VarLength,
+    OUT                             PQWORD  Value
+) {
+    return SyscallEntry(SyscallIdGetGlobalVariable, VariableName, VarLength, Value);
+}
+
+// Userprog 8
+STATUS
+SyscallMutexInit(
+    OUT         UM_HANDLE* Mutex
+) {
+    return SyscallEntry(SyscallIdMutexInit, Mutex);
+}
+
+// Userprog 8
+STATUS
+SyscallMutexAcquire(
+    IN       UM_HANDLE          Mutex
+) {
+    return SyscallEntry(SyscallIdMutexAcquire, Mutex);
+}
+
+// Userprog 8
+STATUS
+SyscallMutexRelease(
+    IN       UM_HANDLE          Mutex
+) {
+    return SyscallEntry(SyscallIdMutexRelease, Mutex);
+}

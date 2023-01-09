@@ -762,7 +762,7 @@ STATUS
         LOG("Freed Frame Mapping -> PA: 0x%X   VA: 0x%X   AccesCount: %U", frameMapping->PhysicalAddress, frameMapping->VirtualAddress, frameMapping->AccessCount);
 
         RemoveEntryList(ListEntry);
-        ExFreePoolWithTag(frameMapping, HEAP_MMU_TAG);
+        ExFreePoolWithTag(frameMapping, HEAP_TEST_TAG);
     }
 
     return STATUS_SUCCESS;

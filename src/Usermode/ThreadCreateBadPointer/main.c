@@ -9,28 +9,44 @@ __main(
     char**      argv
 )
 {
-    UM_HANDLE hThread;
-    volatile QWORD test = 0;
 
     UNREFERENCED_PARAMETER(argc);
     UNREFERENCED_PARAMETER(argv);
 
-    hThread = UM_INVALID_HANDLE_VALUE;
+    // Userprog 7
+    STATUS status;
+    QWORD value;
 
     __try
     {
-        UmThreadCreate((PFUNC_ThreadStart) 0x7000'3203ULL, NULL, &hThread);
-
-        // wait for the process to crash
-        while(&hThread)
+        LOG("bEFORE SET\n");
+        status = SyscallSetGlobalVariable("cool", sizeof("cool"), 0x300);
+        if (!SUCCEEDED(status))
         {
-            test += 1;
-            _mm_pause();
+            LOG_FUNC_ERROR("SyscallSetGlobalVariable", status);
+            __leave;
         }
+
+        LOG("after SET\n");
+        status = SyscallGetGlobalVariable("Cool", sizeof("Cool"), &value);
+        if (SUCCEEDED(status))
+        {
+            LOG_FUNC_ERROR("SyscallGetGlobalVariable", status);
+            __leave;
+        }
+
+        LOG("after failed gET\n");
+        status = SyscallGetGlobalVariable("cool", sizeof("cool"), &value);
+        if (!SUCCEEDED(status))
+        {
+            LOG_FUNC_ERROR("SyscallGetGlobalVariable", status);
+            __leave;
+        }
+        LOG("after succ gET\n");
     }
     __finally
     {
-
+        LOG("Finished testing SyscallSetGlobalVariable and SyscallGetGlobalVariable\n");
     }
 
     return STATUS_SUCCESS;

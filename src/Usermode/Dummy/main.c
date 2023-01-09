@@ -33,7 +33,7 @@ __main(
     }
     __finally
     {
-        
+        LOG("Finished testing SyscallMemset\n");
     }
 
     return STATUS_SUCCESS;

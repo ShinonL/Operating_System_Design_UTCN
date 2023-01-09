@@ -314,3 +314,43 @@ SyscallMemset(
     IN                          DWORD   BytesToWrite,
     IN                          BYTE    ValueToWrite
 );
+
+// Userprog 6
+STATUS
+SyscallDisableSyscalls(
+    IN BOOLEAN      Disabled
+);
+
+// Userprog 7
+STATUS
+SyscallSetGlobalVariable(
+    IN_READS_Z(VarLength)           char* VariableName,
+    IN                              DWORD   VarLength,
+    IN                              QWORD   Value
+);
+
+// Userprog 7
+STATUS
+SyscallGetGlobalVariable(
+    IN_READS_Z(VarLength)           char* VariableName,
+    IN                              DWORD   VarLength,
+    OUT                             PQWORD  Value
+);
+
+// Userprog 8
+STATUS
+SyscallMutexInit(
+    OUT         UM_HANDLE* Mutex
+);
+
+// Userprog 8
+STATUS
+SyscallMutexAcquire(
+    IN       UM_HANDLE          Mutex
+);
+
+// Userprog 8
+STATUS
+SyscallMutexRelease(
+    IN       UM_HANDLE          Mutex
+);

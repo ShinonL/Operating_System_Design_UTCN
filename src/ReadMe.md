@@ -42,10 +42,26 @@ O sa incerc sa termin weekendul acesta restul exercitiilor.
 ## Ex 4
 
 - poate fi gasit prin comentariul "Userprog 4"
+- in dummy.exe e testul
 
 ## Ex 5
 
 - poate fi gasit prin comentariul "Userprog 5"
+
+## Ex 6
+
+- poate fi gasit prin comentariul "Userprog 6"
+- in threadwaitbadhandle.exe e testul
+
+## Ex 7
+
+- poate fi gasit prin comentariul "Userprog 7"
+- in threadcreatebadpointer.exe e testul
+
+## Ex 8
+
+- poate fi gasit prin comentariul "Userprog 8"
+- in threadclosetwice.exe e testul
 
 # Virtual Memory
 
