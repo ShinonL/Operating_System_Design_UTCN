@@ -217,6 +217,96 @@ void
     LOG("\n");
 }
 
+// Threads 9
+STATUS
+(__cdecl CalculateSumThreadFunc)(
+    IN_OPT      PVOID       Context
+    )
+{
+    ASSERT(Context != NULL);
+
+    PTHREAD_FUNC_CONTEXT pCtx = (PTHREAD_FUNC_CONTEXT)Context;
+
+    QWORD sum = 0;
+    for (QWORD i = pCtx->StartOffset; i < pCtx->EndOffset; i++) {
+        sum += pCtx->Buffer[i];
+    }
+
+    INTR_STATE dummy;
+    LockAcquire(pCtx->Lock, &dummy);
+    *(pCtx->Sum) += sum;
+    LockRelease(pCtx->Lock, dummy);
+
+    return STATUS_SUCCESS;
+}
+
+// Threads 9
+void
+(__cdecl CmdCalculateSum)(
+    IN          QWORD       NumberOfParameters,
+    IN_Z        char*       NumberOfThreads,
+    IN_Z        char*       FilePath
+    ) {
+    ASSERT(NumberOfParameters == 2);
+    ASSERT(FilePath != NULL);
+    ASSERT(NumberOfThreads != NULL);
+
+    DWORD noThreads = 0;
+    atoi((PVOID)&noThreads, NumberOfThreads, 10, FALSE);
+
+    ASSERT(noThreads > 0);
+
+    PFILE_OBJECT pFileObject;
+    STATUS status = IoCreateFile(&pFileObject, FilePath, FALSE, FALSE, FALSE);
+    if (!SUCCEEDED(status)) {
+        LOGL("Couldn't open file\n");
+        return;
+    }
+
+    PFILE_INFORMATION pFileInformation = ExAllocatePoolWithTag(PoolAllocateZeroMemory, sizeof(FILE_INFORMATION), HEAP_TEST_TAG, 0);
+    status = IoQueryInformationFile(pFileObject, pFileInformation);
+    if (!SUCCEEDED(status)) {
+        LOGL("Couldn't get file info\n");
+        return;
+    }
+
+    LOGL("dilesize %U\n", pFileInformation->FileSize);
+
+    PBYTE pBuffer = ExAllocatePoolWithTag(PoolAllocateZeroMemory, sizeof(BYTE) * (DWORD)pFileInformation->FileSize, HEAP_TEST_TAG, 0);
+    QWORD BytesRead;
+    status = IoReadFile(pFileObject, pFileInformation->FileSize, 0, pBuffer, &BytesRead);
+    if (!SUCCEEDED(status)) {
+        LOGL("Couldn't read file\n");
+        return;
+    }
+
+    LOCK threadLock;
+    LockInit(&threadLock);
+
+    QWORD sum = 0;
+    for (DWORD i = 0; i < noThreads; i++) {
+        char* threadName = ExAllocatePoolWithTag(PoolAllocateZeroMemory, sizeof("Thread 10000"), HEAP_TEST_TAG, 0);
+        sprintf(threadName, "Thread %d", i);
+
+        PTHREAD_FUNC_CONTEXT pThreadFuncCtx = ExAllocatePoolWithTag(PoolAllocateZeroMemory, sizeof(THREAD_FUNC_CONTEXT), HEAP_TEST_TAG, 0);
+
+        pThreadFuncCtx->StartOffset = BytesRead * i / noThreads;
+        pThreadFuncCtx->EndOffset = BytesRead * (i + 1) / noThreads;
+        pThreadFuncCtx->Buffer = pBuffer;
+        pThreadFuncCtx->Sum = &sum;
+        pThreadFuncCtx->Lock = &threadLock;
+
+        PTHREAD pThread;
+        status = ThreadCreate(threadName, ThreadPriorityDefault, CalculateSumThreadFunc, pThreadFuncCtx, &pThread);
+        if (!SUCCEEDED(status)) {
+            LOGL("Couldn't create thread %d\n", i);
+            return;
+        }
+    }
+
+    LOG("Sum: %U\n", sum);
+}
+
 void
 (__cdecl CmdYield)(
     IN          QWORD       NumberOfParameters

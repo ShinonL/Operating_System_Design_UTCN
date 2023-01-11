@@ -108,6 +108,16 @@ typedef struct _THREAD
     LIST_ENTRY              ChildrenEntry;
 } THREAD, *PTHREAD;
 
+// Threads 9
+typedef struct _THREAD_FUNC_CONTEXT
+{
+    QWORD               StartOffset;
+    QWORD               EndOffset;
+    PBYTE               Buffer;
+    PQWORD              Sum;
+    PLOCK               Lock;
+} THREAD_FUNC_CONTEXT, * PTHREAD_FUNC_CONTEXT;
+
 //******************************************************************************
 // Function:     ThreadSystemPreinit
 // Description:  Basic global initialization. Initializes the all threads list,

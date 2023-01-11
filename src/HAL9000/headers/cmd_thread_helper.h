@@ -18,3 +18,5 @@ FUNC_GenericCommand CmdSpawnThreads;
 FUNC_GenericCommand CmdPrintThreadInfo;
 // Threads 5
 //FUNC_GenericCommand CmdDisplayMutex;
+// Threads 9
+FUNC_GenericCommand CmdCalculateSum;

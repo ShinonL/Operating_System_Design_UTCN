@@ -72,6 +72,8 @@ static const COMMAND_DEFINITION COMMANDS[] =
     { "threadinfo", "Displays threads inf0", CmdPrintThreadInfo, 0, 0},
     // Threads 5
     //{ "displaymutex", "Displays system mutexes", CmdDisplayMutex, 0, 0},
+    // Threads 9
+    { "calculatesum", "Calculate sum on n threads", CmdCalculateSum, 2, 2},
     { "run", "$TEST [$NO_OF_THREADS]\n\tRuns the $TEST specified"
              "\n\t$NO_OF_THREADS the number of threads for running the test,"
              "if the number is not specified then it will run on 2 * NumberOfProcessors",
