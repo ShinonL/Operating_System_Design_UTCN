@@ -6,6 +6,9 @@
 #include "gdtmu.h"
 #include "idt.h"
 #include "thread_internal.h"
+// Threads 6
+#include "barrier.h"
+#include "smp.h"
 
 #define LOW_MEMORY_CONFIG_START         0x1000
 #define LOW_MEMORY_CONFIG_SIZE          0x1000
@@ -278,6 +281,9 @@ ApInitCpu(
         LOG_FUNC_ERROR("CpuMuInitCpu", status );
             __leave;
     }
+
+    // Threads 6
+    BarrierWait(GetBarrier());
 
     MmuActivateProcessIds();
 

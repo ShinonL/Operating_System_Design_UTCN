@@ -23,6 +23,8 @@
 #include "boot_module.h"
 // Userprog 7
 #include "syscall.h"
+// Threads 5
+//#include "mutex.h"
 
 #define NO_OF_TSS_STACKS             7
 STATIC_ASSERT(NO_OF_TSS_STACKS <= NO_OF_IST);
@@ -44,6 +46,10 @@ SystemPreinit(
     memzero(&m_systemData, sizeof(SYSTEM_DATA));
 
     m_systemData.NumberOfTssStacks = NO_OF_TSS_STACKS;
+
+    // Threads 5
+    /*LockInit(GetMutexListLock());
+    InitializeListHead(GetMutexList());*/
 
     BootModulesPreinit();
     DumpPreinit();
@@ -352,6 +358,9 @@ SystemUninit(
     LOGL("Finished command execution\n");
 
     LOGL("%s terminating!\n", OsInfoGetName());
+
+    // Threads 5
+    // ProcessSystemUninit();
 
     // disable interrupts
     CpuIntrDisable();

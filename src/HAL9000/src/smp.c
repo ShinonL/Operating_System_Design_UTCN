@@ -9,6 +9,8 @@
 #include "io.h"
 #include "ex_event.h"
 #include "hw_fpu.h"
+// Threads 6
+#include "barrier.h"
 
 extern void ApAsmStub();
 
@@ -33,14 +35,24 @@ typedef struct _SMP_DATA
     volatile DWORD          NoOfActiveCpus;
 
     BYTE                    SipiVector;
-    EX_EVENT                ApStartupEvent;
+
+    // Threads 6
+    //EX_EVENT                ApStartupEvent;
 
     BYTE                    ApicTimerVector;
     BYTE                    IpcIpiVector;
     BYTE                    AssertIpiVector;
+    
+    // Threads 6
+    BARRIER                 Barrier;
 } SMP_DATA, *PSMP_DATA;
 
 static SMP_DATA m_smpData;
+
+
+PBARRIER GetBarrier() {
+    return &m_smpData.Barrier;
+}
 
 __forceinline
 STATUS
@@ -185,12 +197,13 @@ SmpInit(
     noOfCpus = 0;
     bRestartSearch = TRUE;
 
-    status = ExEventInit(&m_smpData.ApStartupEvent, ExEventTypeSynchronization, FALSE);
+    // Threads 6
+    /*status = ExEventInit(&m_smpData.ApStartupEvent, ExEventTypeSynchronization, FALSE);
     if (!SUCCEEDED(status))
     {
         LOG_FUNC_ERROR("EvtInitialize", status);
         return status;
-    }
+    }*/
 
     // install ISRs
     status = _SmpInstallInterruptRoutines();
@@ -338,10 +351,14 @@ SmpWakeupAps(
     if (m_smpData.NoOfCpus > 1)
     {
         LOGL("Will signal APs\n");
+
+        // Threads 6
+        BarrierInit(&m_smpData.Barrier, m_smpData.NoOfCpus);
         _SmpSignalAllAPs(m_smpData.SipiVector);
+        BarrierWait(&m_smpData.Barrier);
         LOGL("APs were signaled\n");
 
-        ExEventWaitForSignal(&m_smpData.ApStartupEvent);
+        //ExEventWaitForSignal(&m_smpData.ApStartupEvent);
 
         LOGL("Aps have waken UP\n");
     }
@@ -609,7 +626,8 @@ SmpNotifyCpuWakeup(
     if( noOfActiveCpus == m_smpData.NoOfCpus )
     {
         LOGPL("All CPUs woke up, will signal BSP\n");
-        ExEventSignal(&m_smpData.ApStartupEvent);
+        // Threads 6
+        //ExEventSignal(&m_smpData.ApStartupEvent);
     }
 
     LOG_FUNC_END_CPU;

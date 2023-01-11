@@ -358,7 +358,7 @@ SyscallFileWrite(
         return STATUS_INVALID_PARAMETER1;
     }
 
-    if (!SUCCEEDED(MmuIsBufferValid(Buffer, BytesToWrite, PAGE_RIGHTS_READ, GetCurrentProcess())) || ((char*) Buffer)[BytesToWrite - 1] != 0) {
+    if (!SUCCEEDED(MmuIsBufferValid((PVOID)Buffer, BytesToWrite, PAGE_RIGHTS_READ, GetCurrentProcess())) || ((char*) Buffer)[BytesToWrite - 1] != 0) {
         return STATUS_INVALID_BUFFER;
     }
 
@@ -366,7 +366,7 @@ SyscallFileWrite(
         return STATUS_INVALID_PARAMETER3;
     }
 
-    if (!SUCCEEDED(MmuIsBufferValid(BytesWritten, sizeof(QWORD), PAGE_RIGHTS_WRITE, GetCurrentProcess()))) {
+    if (!SUCCEEDED(MmuIsBufferValid((PVOID)BytesWritten, sizeof(QWORD), PAGE_RIGHTS_WRITE, GetCurrentProcess()))) {
         return STATUS_INVALID_PARAMETER4;
     }
 
@@ -383,7 +383,7 @@ SyscallMemset(
     IN                          DWORD   BytesToWrite,
     IN                          BYTE    ValueToWrite
 ) {
-    if (!SUCCEEDED(MmuIsBufferValid(Address, BytesToWrite, PAGE_RIGHTS_WRITE, GetCurrentProcess()))) {
+    if (!SUCCEEDED(MmuIsBufferValid((PVOID)Address, BytesToWrite, PAGE_RIGHTS_WRITE, GetCurrentProcess()))) {
         return STATUS_INVALID_BUFFER;
     }
 
@@ -409,7 +409,7 @@ SyscallVirtualAlloc(
         return STATUS_INVALID_PARAMETER2;
     }
 
-    if (!SUCCEEDED(MmuIsBufferValid(BaseAddress, Size, PageRights, GetCurrentProcess()))) {
+    if (!SUCCEEDED(MmuIsBufferValid((PVOID)BaseAddress, Size, PageRights, GetCurrentProcess()))) {
         return STATUS_INVALID_PARAMETER1;
     }
 
@@ -417,7 +417,7 @@ SyscallVirtualAlloc(
         return STATUS_INVALID_PARAMETER5;
     }
 
-    if (!SUCCEEDED(MmuIsBufferValid(AllocatedAddress, sizeof(PVOID), PAGE_RIGHTS_WRITE, GetCurrentProcess()))) {
+    if (!SUCCEEDED(MmuIsBufferValid((PVOID)AllocatedAddress, sizeof(PVOID), PAGE_RIGHTS_WRITE, GetCurrentProcess()))) {
         return STATUS_INVALID_BUFFER;
     }
 
@@ -443,7 +443,7 @@ SyscallProcessCreate(
         return STATUS_INVALID_PARAMETER2;
     }
 
-    if (!SUCCEEDED(MmuIsBufferValid(ProcessPath, PathLength, PAGE_RIGHTS_READ, GetCurrentProcess())) 
+    if (!SUCCEEDED(MmuIsBufferValid((PVOID)ProcessPath, PathLength, PAGE_RIGHTS_READ, GetCurrentProcess()))
         || ProcessPath[PathLength - 1] != 0 
         || strlen(ProcessPath) != PathLength - 1) {
         return STATUS_INVALID_PARAMETER1;
@@ -457,14 +457,14 @@ SyscallProcessCreate(
         if (ArgLength != 0) {
             return STATUS_INVALID_PARAMETER3;
         }
-    } else if (!SUCCEEDED(MmuIsBufferValid(Arguments, ArgLength, PAGE_RIGHTS_READ, GetCurrentProcess()))
+    } else if (!SUCCEEDED(MmuIsBufferValid((PVOID)Arguments, ArgLength, PAGE_RIGHTS_READ, GetCurrentProcess()))
         || Arguments[ArgLength - 1] != 0
         || strlen(Arguments) != ArgLength - 1) {
 
         return STATUS_INVALID_PARAMETER3;
     }
 
-    if (!SUCCEEDED(MmuIsBufferValid(ProcessHandle, sizeof(UM_HANDLE), PAGE_RIGHTS_WRITE, GetCurrentProcess()))) {
+    if (!SUCCEEDED(MmuIsBufferValid((PVOID)ProcessHandle, sizeof(UM_HANDLE), PAGE_RIGHTS_WRITE, GetCurrentProcess()))) {
         return STATUS_INVALID_PARAMETER5;
     }
     
@@ -511,7 +511,7 @@ SyscallSetGlobalVariable(
     }
 
     LOG("set 1\n");
-    if (!SUCCEEDED(MmuIsBufferValid(VariableName, VarLength, PAGE_RIGHTS_READ, GetCurrentProcess())) 
+    if (!SUCCEEDED(MmuIsBufferValid((PVOID)VariableName, VarLength, PAGE_RIGHTS_READ, GetCurrentProcess()))
         || VariableName[VarLength - 1] != 0 
         || strlen(VariableName) != VarLength - 1) {
         return STATUS_INVALID_PARAMETER1;
@@ -574,7 +574,7 @@ SyscallGetGlobalVariable(
     }
 
     LOG("get 1\n");
-    if (!SUCCEEDED(MmuIsBufferValid(VariableName, VarLength, PAGE_RIGHTS_READ, GetCurrentProcess())) 
+    if (!SUCCEEDED(MmuIsBufferValid((PVOID)VariableName, VarLength, PAGE_RIGHTS_READ, GetCurrentProcess()))
         || VariableName[VarLength - 1] != 0 
         || strlen(VariableName) != VarLength - 1) {
         return STATUS_INVALID_PARAMETER1;

@@ -185,3 +185,6 @@ ProcessActivatePagingTables(
     IN      PPROCESS            Process,
     IN      BOOLEAN             InvalidateAddressSpace
     );
+
+// Threads 5
+void ProcessSystemUninit();

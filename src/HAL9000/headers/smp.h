@@ -2,6 +2,8 @@
 
 #include "list.h"
 #include "ipc.h"
+// Threads 6
+#include "barrier.h"
 
 typedef BYTE CPU_AFFINITY;
 
@@ -39,6 +41,9 @@ typedef enum _SMP_IPI_SEND_MODE
 
     SmpIpiSendMax = SmpIpiSendToGroup
 } SMP_IPI_SEND_MODE;
+
+// Threads 6
+PBARRIER GetBarrier();
 
 _No_competing_thread_
 void

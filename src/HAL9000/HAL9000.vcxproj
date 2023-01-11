@@ -184,6 +184,7 @@
     <ClCompile Include="src\acpi_interface.c" />
     <ClCompile Include="src\acpi_osl.c" />
     <ClCompile Include="src\ap_tramp.c" />
+    <ClCompile Include="src\barrier.c" />
     <ClCompile Include="src\boot_module.c" />
     <ClCompile Include="src\cmd_basic.c" />
     <ClCompile Include="src\cmd_proc_helper.c" />
@@ -288,6 +289,7 @@
     <ClInclude Include="..\shared\kernel\thread.h" />
     <ClInclude Include="headers\acpi_interface.h" />
     <ClInclude Include="headers\ap_tramp.h" />
+    <ClInclude Include="headers\barrier.h" />
     <ClInclude Include="headers\boot_module.h" />
     <ClInclude Include="headers\cmd_basic.h" />
     <ClInclude Include="headers\cmd_common.h" />

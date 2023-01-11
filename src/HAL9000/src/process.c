@@ -24,6 +24,12 @@ typedef struct _PROCESS_SYSTEM_DATA
 
 static PROCESS_SYSTEM_DATA m_processData;
 
+// Threads 5
+//void ProcessSystemUninit() {
+//    MutexDestroy(&m_processData.PidBitmapLock);
+//    MutexDestroy(&m_processData.ProcessListLock);
+//}
+
 static
 __forceinline
 PID

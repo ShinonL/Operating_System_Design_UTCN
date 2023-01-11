@@ -143,6 +143,64 @@ void
     ASSERT( SUCCEEDED(status));
 }
 
+// Threads 5
+//static
+//STATUS
+//(__cdecl CmdPrintMutex) (
+//    IN      PLIST_ENTRY     ListEntry,
+//    IN_OPT  PVOID           FunctionContext
+//    )
+//{
+//    ASSERT(NULL != FunctionContext);
+//    PMUTEX pMutex = CONTAINING_RECORD(ListEntry, MUTEX, MutexesListEntry);
+//
+//    LOG("MUTEX\n");
+//    LOG("CurrentRecursivityDepth: %d\n", pMutex->CurrentRecursivityDepth);
+//    LOG("MaxRecursivityDepth: %d\n", pMutex->MaxRecursivityDepth);
+//    if (pMutex->Holder != NULL)
+//        LOG("Holder: %U", pMutex->Holder->Id);
+//    else LOG("Holder: none\n");
+//
+//    if (IsListEmpty(&pMutex->WaitingList)) {
+//        return STATUS_SUCCESS;
+//    }
+//
+//    LOG("%7s", "TID|");
+//    LOG("%20s", "Name|");
+//    LOG("%5s", "Prio|");
+//    LOG("%8s", "State|");
+//    LOG("%10s", "Cmp ticks|");
+//    LOG("%10s", "Prt ticks|");
+//    LOG("%10s", "Ttl ticks|");
+//    LOG("%10s", "Process|");
+//    LOG("\n");
+//    
+//    INTR_STATE dummy;
+//    LockAcquire(&pMutex->MutexLock, &dummy);
+//    STATUS status = ForEachElementExecute(&pMutex->WaitingList, _CmdThreadPrint, NULL, TRUE);
+//    LockRelease(&pMutex->MutexLock, dummy);
+//
+//    LOG("___________________________________________________\n\n\n");
+//
+//    return status;
+//}
+//
+//// Threads 5
+//void
+//(__cdecl CmdDisplayMutex)(
+//    IN          QWORD       NumberOfParameters
+//    ) {
+//    ASSERT(NumberOfParameters == 0);
+//
+//    PLOCK mutexLock = GetMutexListLock();
+//
+//    INTR_STATE dummy;
+//    LockAcquire(mutexLock, &dummy);
+//    PLIST_ENTRY mutexList = GetMutexList();
+//    ForEachElementExecute(mutexList, CmdPrintMutex, NULL, TRUE);
+//    LockRelease(mutexLock, dummy);
+//}
+
 // Threads 4
 void
 (__cdecl CmdPrintThreadInfo)(

@@ -151,6 +151,9 @@ IoDeleteDevice(
     RemoveEntryList(&Device->NextDevice);
     pDriver->NoOfDevices = pDriver->NoOfDevices - 1;
 
+    // Threads 5
+    //MutexDestroy(&Device->DeviceLock);
+
     if (0 != Device->DeviceExtensionSize)
     {
         ASSERT(NULL != Device->DeviceExtension);

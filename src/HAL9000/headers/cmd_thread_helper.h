@@ -16,3 +16,5 @@ FUNC_GenericCommand CmdCheckAd;
 FUNC_GenericCommand CmdSpawnThreads;
 // Threads 4
 FUNC_GenericCommand CmdPrintThreadInfo;
+// Threads 5
+//FUNC_GenericCommand CmdDisplayMutex;

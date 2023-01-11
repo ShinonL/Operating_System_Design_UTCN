@@ -21,6 +21,14 @@ O sa incerc sa termin weekendul acesta restul exercitiilor.
 - poate fi gasit prin comentariul "Threads 4"
 - Ne-am uitat impreuna si nu am gasit de ce nu merge
 
+## Ex 5
+
+- poate fi gasit prin comentariul "Threads 5"
+
+## Ex 6
+
+- poate fi gasit prin comentariul "Threads 6"
+
 ## Ex 8
 
 - poate fi gasit prin comentariul "Threads 8"
