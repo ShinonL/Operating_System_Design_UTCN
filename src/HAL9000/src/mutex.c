@@ -24,14 +24,40 @@
 //    return &m_MutexData.MutexListLock;
 //}
 
+// Threads 5
+//_No_competing_thread_
+//void
+//MutexInit(
+//    OUT         PMUTEX*      Mutex,
+//    IN          BOOLEAN     Recursive
+//    )
+//{
+//    ASSERT( NULL != Mutex );
+//
+//    //memzero(Mutex, sizeof(MUTEX));
+//    *Mutex = ExAllocatePoolWithTag(PoolAllocateZeroMemory, sizeof(MUTEX), HEAP_TEST_TAG, 0);
+//
+//    LockInit(&(*Mutex)->MutexLock);
+//
+//    InitializeListHead(&(*Mutex)->WaitingList);
+//
+//    (*Mutex)->MaxRecursivityDepth = Recursive ? MUTEX_MAX_RECURSIVITY_DEPTH : 1;
+//
+//    // Threads 5 - comentat pt ca nu merge
+//    INTR_STATE dummy;
+//    LockAcquire(&m_MutexData.MutexListLock, &dummy);
+//    InsertTailList(&m_MutexData.MutexList, &(*Mutex)->MutexesListEntry);
+//    LockRelease(&m_MutexData.MutexListLock, dummy);
+//}
+
 _No_competing_thread_
 void
 MutexInit(
     OUT         PMUTEX      Mutex,
     IN          BOOLEAN     Recursive
-    )
+)
 {
-    ASSERT( NULL != Mutex );
+    ASSERT(NULL != Mutex);
 
     memzero(Mutex, sizeof(MUTEX));
 
@@ -40,12 +66,6 @@ MutexInit(
     InitializeListHead(&Mutex->WaitingList);
 
     Mutex->MaxRecursivityDepth = Recursive ? MUTEX_MAX_RECURSIVITY_DEPTH : 1;
-
-    // Threads 5 - comentat pt ca nu merge
-    //INTR_STATE dummy;
-    //LockAcquire(&m_MutexData.MutexListLock, &dummy);
-    //InsertTailList(&m_MutexData.MutexList, &Mutex->MutexesListEntry);
-    //LockRelease(&m_MutexData.MutexListLock, dummy);
 }
 
 ACQUIRES_EXCL_AND_REENTRANT_LOCK(*Mutex)
@@ -149,5 +169,5 @@ MutexRelease(
 //    RemoveEntryList(&Mutex->MutexesListEntry);
 //    LockRelease(&m_MutexData.MutexListLock, dummy);
 //
-//    ExFreePoolWithTag(Mutex, HEAP_TEST_TAG);
+//    //ExFreePoolWithTag(Mutex, HEAP_TEST_TAG);
 //}

@@ -41,6 +41,14 @@ MutexInit(
     IN          BOOLEAN     Recursive
     );
 
+// Threads 5
+//_No_competing_thread_
+//void
+//MutexInit(
+//    OUT         PMUTEX* Mutex,
+//    IN          BOOLEAN     Recursive
+//);
+
 //******************************************************************************
 // Function:     MutexAcquire
 // Description:  Acquires a mutex. If the mutex is currently held the thread

@@ -360,7 +360,7 @@ SystemUninit(
     LOGL("%s terminating!\n", OsInfoGetName());
 
     // Threads 5
-    // ProcessSystemUninit();
+    //ProcessSystemUninit();
 
     // disable interrupts
     CpuIntrDisable();

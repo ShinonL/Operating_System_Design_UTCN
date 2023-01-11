@@ -218,6 +218,26 @@ void
 }
 
 // Threads 9
+//STATUS
+//(__cdecl CalculateSumThreadFunc)(
+//    IN_OPT      PVOID       Context
+//    )
+//{
+//    ASSERT(Context != NULL);
+//
+//    PTHREAD_FUNC_CONTEXT pCtx = (PTHREAD_FUNC_CONTEXT)Context;
+//
+//    QWORD sum = 0;
+//    for (QWORD i = pCtx->StartOffset; i < pCtx->EndOffset; i++) {
+//        sum += pCtx->Buffer[i];
+//    }
+//
+//    *(pCtx->Sum) = sum;
+//
+//    return STATUS_SUCCESS;
+//}
+
+// Threads 10
 STATUS
 (__cdecl CalculateSumThreadFunc)(
     IN_OPT      PVOID       Context
@@ -240,7 +260,7 @@ STATUS
     return STATUS_SUCCESS;
 }
 
-// Threads 9
+// Threads 10
 void
 (__cdecl CmdCalculateSum)(
     IN          QWORD       NumberOfParameters,
@@ -279,6 +299,39 @@ void
         LOGL("Couldn't read file\n");
         return;
     }
+
+
+    // Threads 9
+    /*PQWORD partialsums = ExAllocatePoolWithTag(PoolAllocateZeroMemory, noThreads * sizeof(QWORD), HEAP_TEST_TAG, 0);
+    PTHREAD* pThreads = ExAllocatePoolWithTag(PoolAllocateZeroMemory, noThreads * sizeof(PTHREAD), HEAP_TEST_TAG, 0);
+
+    for (DWORD i = 0; i < noThreads; i++) {
+        char* threadName = ExAllocatePoolWithTag(PoolAllocateZeroMemory, sizeof("Thread 10000"), HEAP_TEST_TAG, 0);
+        sprintf(threadName, "Thread %d", i);
+
+        PTHREAD_FUNC_CONTEXT pThreadFuncCtx = ExAllocatePoolWithTag(PoolAllocateZeroMemory, sizeof(THREAD_FUNC_CONTEXT), HEAP_TEST_TAG, 0);
+
+        pThreadFuncCtx->StartOffset = BytesRead * i / noThreads;
+        pThreadFuncCtx->EndOffset = BytesRead * (i + 1) / noThreads;
+        pThreadFuncCtx->Buffer = pBuffer;
+        pThreadFuncCtx->Sum = &(partialsums[i]);
+
+        status = ThreadCreate(threadName, ThreadPriorityDefault, CalculateSumThreadFunc, pThreadFuncCtx, &pThreads[i]);
+        if (!SUCCEEDED(status)) {
+            LOGL("Couldn't create thread %d\n", i);
+            return;
+        }
+    }
+
+    for (DWORD i = 0; i < noThreads; i++) {
+        ThreadWaitForTermination(pThreads[i], &status);
+    }
+
+    QWORD sum = 0;
+    for (DWORD i = 0; i < noThreads; i++) {
+        sum += partialsums[i];
+    }*/
+
 
     LOCK threadLock;
     LockInit(&threadLock);

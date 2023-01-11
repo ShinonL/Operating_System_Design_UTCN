@@ -10,6 +10,8 @@
 
 typedef struct _PROCESS_SYSTEM_DATA
 {
+    // Threads 5
+    //PMUTEX           PidBitmapLock;
     MUTEX           PidBitmapLock;
 
     _Guarded_by_(PidBitmapLock)
@@ -19,6 +21,8 @@ typedef struct _PROCESS_SYSTEM_DATA
     PPROCESS        SystemProcess;
 
     LIST_ENTRY      ProcessList;
+    // Threads 5
+    // PMUTEX           ProcessListLock;
     MUTEX           ProcessListLock;
 } PROCESS_SYSTEM_DATA, *PPROCESS_SYSTEM_DATA;
 
@@ -26,8 +30,8 @@ static PROCESS_SYSTEM_DATA m_processData;
 
 // Threads 5
 //void ProcessSystemUninit() {
-//    MutexDestroy(&m_processData.PidBitmapLock);
-//    MutexDestroy(&m_processData.ProcessListLock);
+//    MutexDestroy(m_processData.PidBitmapLock);
+//    MutexDestroy(m_processData.ProcessListLock);
 //}
 
 static

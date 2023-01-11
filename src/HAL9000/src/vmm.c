@@ -115,6 +115,47 @@ static FUNC_PageWalkCallback            _VmMapPage;
 static FUNC_PageWalkCallback            _VmUnmapPage;
 static FUNC_PageWalkCallback            _VmRetrievePhyAccess;
 
+// VM 6
+void
+VmmTick(
+    void
+)
+{
+    PPROCESS pProcess = GetCurrentProcess();
+    INTR_STATE intrState;
+
+    LockAcquire(&pProcess->FrameMapLock, &intrState);
+    for (PLIST_ENTRY pCurrentEntry = pProcess->FrameMappingsHead.Flink;
+        pCurrentEntry != &pProcess->FrameMappingsHead;
+        pCurrentEntry = pCurrentEntry->Flink)
+    {
+        BOOLEAN bAccessed;
+        BOOLEAN bDirty;
+        PHYSICAL_ADDRESS pa;
+        PML4 cr3;
+
+        PFRAME_MAPPING pMapping = CONTAINING_RECORD(pCurrentEntry, FRAME_MAPPING, FrameListEntry);
+
+        cr3.Raw = (QWORD)pProcess->PagingData->Data.BasePhysicalAddress;
+
+        pa = VmmGetPhysicalAddressEx(cr3,
+            pMapping->VirtualAddress,
+            &bAccessed,
+            &bDirty);
+        ASSERT(pa == pMapping->PhysicalAddress);
+
+        if (bAccessed || bDirty) {
+            LOG("Page 0x%X was accessed or is dirty\n", pMapping->VirtualAddress);
+        }
+        else {
+            LOG("Page 0x%X was NOT accessed NOR is dirty\n", pMapping->VirtualAddress);
+        }
+
+        pMapping->AccessCount += (bAccessed || bDirty);
+    }
+    LockRelease(&pProcess->FrameMapLock, intrState);
+}
+
 // VM 4
 static
 void

@@ -307,3 +307,9 @@ VmmIsBufferValid(
     IN          PVMM_RESERVATION_SPACE              ReservationSpace,
     IN          BOOLEAN                             KernelAccess
     );
+
+// VM 6
+void
+VmmTick(
+    void
+);
